@@ -29,6 +29,49 @@ INK = '#22284A'
 
 ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII']
 
+# ── Íconos propios (logos convertidos a PNG en ./icons) ─────────────────
+_ICONS_DIR = os.path.join(_BASE, 'icons')
+
+# (nombre en el texto, archivo de ícono) — los nombres largos van primero
+_NAME_ICON = [
+    ("Luna Negra", "aLunaNegra"), ("Nodo Norte", "aNoduloNorte"),
+    ("Nodo Sur", "aNoduloSur"), ("Rueda de la Fortuna", "aRuedaFortuna"),
+    ("Parte de la Fortuna", "aRuedaFortuna"),
+    ("Sol", "aSol"), ("Luna", "aLuna"), ("Mercurio", "aMercurio"),
+    ("Venus", "aVenus"), ("Marte", "aMarte"), ("Júpiter", "aJupiter"),
+    ("Jupiter", "aJupiter"), ("Saturno", "aSaturno"), ("Urano", "aUrano"),
+    ("Neptuno", "aNeptuno"), ("Plutón", "aPluton"), ("Pluton", "aPluton"),
+    ("Quirón", "aChiron"), ("Quiron", "aChiron"), ("Tierra", "aTierra"),
+    ("Aries", "Aries"), ("Tauro", "Taurus"), ("Géminis", "Gemini"),
+    ("Geminis", "Gemini"), ("Cáncer", "Cancer"), ("Cancer", "Cancer"),
+    ("Leo", "Leo"), ("Virgo", "Virgo"), ("Libra", "Libra"),
+    ("Escorpión", "Scorpio"), ("Escorpio", "Scorpio"),
+    ("Sagitario", "Sagittarius"), ("Capricornio", "Capricorn"),
+    ("Acuario", "Aquarius"), ("Piscis", "Pisces"),
+]
+
+import re as _re
+_NAME_RE = _re.compile(
+    r'\b(' + '|'.join(_re.escape(n) for n, _ in _NAME_ICON) + r')\b')
+_NAME2FILE = {n: k for n, k in _NAME_ICON}
+
+
+def _icon_path(name):
+    p = os.path.join(_ICONS_DIR, _NAME2FILE.get(name, '') + '.png')
+    return p if os.path.exists(p) else None
+
+
+def _segments(text):
+    """Divide el texto en [(texto, icono_o_None), ...] insertando el ícono
+    después de cada nombre de planeta o signo (como en el reporte modelo)."""
+    out = []
+    last = 0
+    for m in _NAME_RE.finditer(text):
+        out.append((text[last:m.end()], _icon_path(m.group(1))))
+        last = m.end()
+    out.append((text[last:], None))
+    return out
+
 _INTERP = None
 
 
@@ -133,6 +176,16 @@ def render_pdf(title, intro, sections, chart_png_bytes, user_line):
     def esc(t):
         return t.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
+    def with_icons(t, size=8):
+        """Texto escapado con los íconos propios tras cada nombre."""
+        parts = []
+        for seg, icon in _segments(t):
+            parts.append(esc(seg))
+            if icon:
+                parts.append(' <img src="%s" width="%d" height="%d" valign="-1"/>'
+                             % (icon, size, size))
+        return ''.join(parts)
+
     st_title = ParagraphStyle('t', fontName=bd, fontSize=28, leading=34,
                               textColor=C.HexColor(GOLD), alignment=TA_CENTER)
     st_sub = ParagraphStyle('s', fontName=it, fontSize=13, leading=18,
@@ -149,18 +202,33 @@ def render_pdf(title, intro, sections, chart_png_bytes, user_line):
                              textColor=C.HexColor(INK), alignment=TA_JUSTIFY, spaceAfter=4)
 
     def on_cover(cv, doc):
+        """Portada minimalista: azul noche plano, doble filete dorado y un
+        pequeño rombo como único ornamento."""
         cv.saveState()
-        ct = (0x0B, 0x10, 0x30); cb = (0xEC, 0xEF, 0xF7); n = 150
-        for i in range(n):
-            yc = (i + 0.5) / n
-            col = tuple(cb[k] + (ct[k] - cb[k]) * yc for k in range(3))
-            cv.setFillColorRGB(col[0] / 255., col[1] / 255., col[2] / 255.)
-            cv.rect(0, i * page_h / n, page_w + 1, page_h / n + 1.2, fill=1, stroke=0)
-        cv.setFillColor(C.HexColor(BLUE)); cv.circle(page_w / 2, page_h * 0.80, 74, fill=1, stroke=0)
-        cv.setFillColorRGB(ct[0] / 255., ct[1] / 255., ct[2] / 255.)
-        cv.circle(page_w / 2, page_h * 0.80, 63, fill=1, stroke=0)
-        cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.8)
-        cv.line(page_w * 0.32, page_h * 0.12, page_w * 0.68, page_h * 0.12)
+        cv.setFillColorRGB(0x0E / 255., 0x13 / 255., 0x32 / 255.)
+        cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+        # doble filete dorado
+        cv.setStrokeColor(C.HexColor(GOLD))
+        cv.setLineWidth(1.0)
+        cv.rect(36, 36, page_w - 72, page_h - 72, fill=0, stroke=1)
+        cv.setLineWidth(0.4)
+        cv.rect(44, 44, page_w - 88, page_h - 88, fill=0, stroke=1)
+        # rombo dorado sobre el título
+        cx, cy, r = page_w / 2, page_h * 0.70, 9
+        p = cv.beginPath()
+        p.moveTo(cx, cy + r); p.lineTo(cx + r, cy); p.lineTo(cx, cy - r)
+        p.lineTo(cx - r, cy); p.close()
+        cv.setLineWidth(0.9)
+        cv.drawPath(p, fill=0, stroke=1)
+        cv.circle(cx, cy, 1.6, fill=1, stroke=0)
+        # filetes cortos a los lados del rombo
+        cv.setLineWidth(0.5)
+        cv.line(cx - 110, cy, cx - r - 12, cy)
+        cv.line(cx + r + 12, cy, cx + 110, cy)
+        # marca inferior
+        cv.setFont(bf, 9)
+        cv.setFillColor(C.HexColor(GOLD))
+        cv.drawCentredString(page_w / 2, 58, 'R E P O R T E   A S T R A L')
         cv.restoreState()
 
     def on_body(cv, doc):
@@ -181,14 +249,16 @@ def render_pdf(title, intro, sections, chart_png_bytes, user_line):
         PageTemplate(id='Body', frames=[frame], onPage=on_body),
     ])
 
-    flow = [NextPageTemplate('Body'), Spacer(1, page_h * 0.17),
-            Paragraph(esc(title), st_title), Spacer(1, 10)]
+    flow = [NextPageTemplate('Body'), Spacer(1, page_h * 0.30),
+            Paragraph(esc(title), st_title), Spacer(1, 14)]
     if user_line:
         flow.append(Paragraph(esc(user_line), st_sub))
-    flow.append(Spacer(1, 24))
-    if intro:
-        flow.append(Paragraph(esc(intro), st_intro))
     flow.append(PageBreak())
+
+    if intro:
+        flow.append(Paragraph(esc(intro), ParagraphStyle(
+            'iB', fontName=it, fontSize=11.5, leading=18,
+            textColor=C.HexColor(NAVY), alignment=TA_JUSTIFY, spaceAfter=14)))
 
     if chart_png_bytes:
         try:
@@ -207,9 +277,9 @@ def render_pdf(title, intro, sections, chart_png_bytes, user_line):
     for sec_title, items in sections:
         flow.append(Paragraph(esc(sec_title), st_h2))
         for it_title, paras in items:
-            flow.append(Paragraph(esc(it_title), st_h3))
+            flow.append(Paragraph(with_icons(it_title, 9), st_h3))
             for p in paras:
-                flow.append(Paragraph(esc(p), st_body))
+                flow.append(Paragraph(with_icons(p, 8), st_body))
     doc.build(flow)
     return buf.getvalue()
 
@@ -222,6 +292,23 @@ def render_docx(title, intro, sections, chart_png_bytes, user_line):
     from docx import Document
     from docx.shared import Pt, RGBColor, Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    def add_text_with_icons(par, text, bold=False, size=None, color=None):
+        """Escribe el texto insertando el ícono propio tras cada nombre."""
+        for seg, icon in _segments(text):
+            if seg:
+                r = par.add_run(seg)
+                r.bold = bold
+                if size:
+                    r.font.size = size
+                if color:
+                    r.font.color.rgb = color
+            if icon:
+                try:
+                    par.add_run(' ')
+                    par.add_run().add_picture(icon, height=Inches(0.12))
+                except Exception:
+                    pass
 
     doc = Document()
     for s in doc.sections:
@@ -252,10 +339,12 @@ def render_docx(title, intro, sections, chart_png_bytes, user_line):
         hr = hp.add_run(sec_title); hr.font.color.rgb = RGBColor(0x1E, 0x24, 0x50)
         for it_title, paras in items:
             sp = doc.add_paragraph()
-            sr = sp.add_run(it_title); sr.bold = True; sr.font.size = Pt(12)
-            sr.font.color.rgb = RGBColor(0x3A, 0x44, 0x88)
+            add_text_with_icons(sp, it_title, bold=True, size=Pt(12),
+                                color=RGBColor(0x3A, 0x44, 0x88))
             for p in paras:
-                bp = doc.add_paragraph(p); bp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                bp = doc.add_paragraph()
+                bp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                add_text_with_icons(bp, p)
 
     buf = io.BytesIO(); doc.save(buf); return buf.getvalue()
 

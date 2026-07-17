@@ -1,0 +1,52 @@
+{
+  "_meta": {"nota": "Glosario del reporte (extraído del reporte clásico). Editable."},
+  "signos_intro": "Los signos del zodiaco son denominados por su representación zoomorfa que explica simbólicamente los 12 arquetipos que utiliza la astrología para interpretar la realidad. Estos describen 12 sectores del firmamento, dividiendo la eclíptica en 30 grados por signo.",
+  "signos": [
+    {"nombre": "Aries", "lema": "YO SOY", "elemento": "Fuego, masculino", "desc": "Chispa, inicio del viaje, autoafirmación. Animales testarudos (carnero, rinoceronte)."},
+    {"nombre": "Tauro", "lema": "YO TENGO", "elemento": "Tierra, femenino", "desc": "Reconoce la materia y lo tangible. Animales de pastoreo."},
+    {"nombre": "Géminis", "lema": "YO PIENSO", "elemento": "Aire, masculino", "desc": "Comunicación, aprendizaje y relación con los otros. Animales astutos (monos, zorros)."},
+    {"nombre": "Cáncer", "lema": "YO SIENTO", "elemento": "Agua, femenino", "desc": "Familia, raíces y refugio emocional. Animales con caparazón."},
+    {"nombre": "Leo", "lema": "YO QUIERO", "elemento": "Fuego, masculino", "desc": "Expresión del yo y creaciones propias. El León."},
+    {"nombre": "Virgo", "lema": "YO SIRVO", "elemento": "Tierra, femenino", "desc": "Vida cotidiana, servicio y análisis. Animales trabajadores."},
+    {"nombre": "Libra", "lema": "YO EQUILIBRO", "elemento": "Aire, masculino", "desc": "Armonía, justicia, diplomacia y amor. Mariposa, ciervo."},
+    {"nombre": "Escorpio", "lema": "YO TRANSFORMO", "elemento": "Agua, femenino", "desc": "Transformación, instinto y oscuridad interior. Arácnidos y reptiles."},
+    {"nombre": "Sagitario", "lema": "YO VEO", "elemento": "Fuego, masculino", "desc": "Exploración, fe y visión más allá de lo conocido."},
+    {"nombre": "Capricornio", "lema": "YO LOGRO", "elemento": "Tierra, femenino", "desc": "Misión y escalada a la cima. Cabra de monte."},
+    {"nombre": "Acuario", "lema": "YO SÉ", "elemento": "Aire, masculino", "desc": "Compartir el conocimiento, lógica universal. Delfines."},
+    {"nombre": "Piscis", "lema": "YO CREO", "elemento": "Agua, femenino", "desc": "Fin del viaje, disolución del yo en el ser infinito."}
+  ],
+  "planetas_intro": "Al momento de calcular una carta astral se considera la hora, el día y el lugar, obteniendo una instantánea de la posición de los planetas respecto a la Tierra. Se considera al individuo como el centro del universo (microcosmos).",
+  "planetas": [
+    {"nombre": "Sol", "desc": "Esencia/Espíritu, vitalidad y propósito. Rige a Leo."},
+    {"nombre": "Luna", "desc": "Alma y parte emocional, sensibilidad. Rige a Cáncer."},
+    {"nombre": "Mercurio", "desc": "Comunicación, intelecto y aprendizaje. Mente inferior. Rige a Géminis."},
+    {"nombre": "Venus", "desc": "Belleza, abundancia y amor. Rige a Tauro y Libra."},
+    {"nombre": "Marte", "desc": "Actividad, voluntad y autoafirmación. Rige a Aries."},
+    {"nombre": "Júpiter", "desc": "Abundancia, fortuna y éxito. Mente Superior. Rige a Sagitario."},
+    {"nombre": "Saturno", "desc": "Orden, misión, estructura y madurez. Rige a Capricornio."},
+    {"nombre": "Urano", "desc": "Caos, libertad y amor universal. Mente Universal. Rige a Acuario."},
+    {"nombre": "Neptuno", "desc": "Lo infinito, la magia y la espiritualidad. Rige a Piscis."},
+    {"nombre": "Plutón", "desc": "Transformación profunda y fuerzas ocultas. Ave fénix. Rige a Escorpio."},
+    {"nombre": "Quirón", "desc": "Servicio, maestría y heridas abiertas. Mente Analítica. Rige a Virgo."},
+    {"nombre": "Nodo Norte", "desc": "Futuro y misión del alma."},
+    {"nombre": "Nodo Sur", "desc": "Pasado y lo que el alma debe dejar atrás."},
+    {"nombre": "Luna Negra", "desc": "El apogeo lunar: lo que no se deja domesticar; la sombra que pide conciencia."},
+    {"nombre": "Parte de la Fortuna", "desc": "Punto de brillo y facilidad en la carta natal."}
+  ],
+  "casas_intro": "Las casas astrológicas dividen la carta astral en 12 sectores, representando aspectos de la vida. Su tamaño depende de la latitud geográfica y la hora exacta del nacimiento.",
+  "casas": [
+    {"nombre": "Casa I (ASC)", "desc": "Personalidad — la máscara que la persona ofrece al mundo."},
+    {"nombre": "Casa II", "desc": "Material — cuerpo físico, finanzas y seguridad material."},
+    {"nombre": "Casa III", "desc": "Aprendizaje — comunicación y relación con el entorno."},
+    {"nombre": "Casa IV (IC)", "desc": "Hogar — raíces, niñez, familia y refugio emocional."},
+    {"nombre": "Casa V", "desc": "Hijos/Creaciones — arte, expresión personal y lo que uno crea."},
+    {"nombre": "Casa VI", "desc": "Trabajo/Salud — vida cotidiana y cómo afecta a la persona."},
+    {"nombre": "Casa VII (DSC)", "desc": "Matrimonio — relaciones íntimas y asociaciones importantes."},
+    {"nombre": "Casa VIII", "desc": "Transformación/Muerte — grandes crisis, instinto y lo esencial."},
+    {"nombre": "Casa IX", "desc": "Mente Superior — viajes, espiritualidad y búsqueda trascendente."},
+    {"nombre": "Casa X (MC)", "desc": "Misión — éxito profesional y punto más alto de la carta."},
+    {"nombre": "Casa XI", "desc": "Altruismo — conciencia social, comunidad e independencia."},
+    {"nombre": "Casa XII", "desc": "Superfísico — sueños, espiritualidad, karma y vidas pasadas."}
+  ],
+  "comentarios_finales": "La lectura de esta carta natal se realiza interpretando cada aspecto y su significado. No se intenta adivinar ni suponer nada, solo se lee un lenguaje. La forma de explicar la carta está realizada de modo que el lector aprenda los conceptos básicos y se interiorice en la astrología, para que pueda llegar a sus propias conclusiones. Esta lectura es un resumen; en caso de querer profundizar, por favor señalarlo."
+}

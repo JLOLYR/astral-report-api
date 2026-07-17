@@ -26,6 +26,8 @@ NAVY = '#1E2450'
 BLUE = '#3A4488'
 SLATE = '#8A93B5'
 INK = '#22284A'
+RED = '#B02020'
+PAPER_BG = '#FFFFFF'
 
 ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII']
 
@@ -73,6 +75,7 @@ def _segments(text):
     return out
 
 _INTERP = None
+_PREAMBLE = None
 
 
 def _interp():
@@ -81,6 +84,145 @@ def _interp():
         with open(os.path.join(_BASE, 'interpretations_es.json'), encoding='utf-8') as f:
             _INTERP = json.load(f)
     return _INTERP
+
+
+def _preamble():
+    global _PREAMBLE
+    if _PREAMBLE is None:
+        try:
+            with open(os.path.join(_BASE, 'preamble_es.json'), encoding='utf-8') as f:
+                _PREAMBLE = json.load(f)
+        except Exception:
+            _PREAMBLE = {}
+    return _PREAMBLE
+
+
+# Regente de cada signo (sistema de la app), cruz y elemento
+_REGENTE = {"Aries": "Marte", "Taurus": "Venus", "Gemini": "Mercurio",
+            "Cancer": "Luna", "Leo": "Sol", "Virgo": "Quirón", "Libra": "Venus",
+            "Scorpio": "Plutón", "Sagittarius": "Júpiter", "Capricorn": "Saturno",
+            "Aquarius": "Urano", "Pisces": "Neptuno"}
+_CRUZ = {"Aries": "cardinal", "Cancer": "cardinal", "Libra": "cardinal",
+         "Capricorn": "cardinal", "Taurus": "fija", "Leo": "fija",
+         "Scorpio": "fija", "Aquarius": "fija", "Gemini": "mutable",
+         "Virgo": "mutable", "Sagittarius": "mutable", "Pisces": "mutable"}
+_ELEM = {"Aries": "fuego", "Leo": "fuego", "Sagittarius": "fuego",
+         "Taurus": "tierra", "Virgo": "tierra", "Capricorn": "tierra",
+         "Gemini": "aire", "Libra": "aire", "Aquarius": "aire",
+         "Cancer": "agua", "Scorpio": "agua", "Pisces": "agua"}
+
+
+def build_preamble(chart):
+    """Bloques del preámbulo, con resaltados según la carta:
+       [("h2",t) | ("p",t) | ("item", nombre, texto, resaltado_bool)]"""
+    pre = _preamble()
+    if not pre:
+        return []
+    planets = {p['key']: p for p in chart['planets']}
+    sun = planets.get('aSol', {})
+    moon = planets.get('aLuna', {})
+    sun_sign_en = sun.get('sign', 'Aries')
+    sun_sign = sun.get('sign_es', sun_sign_en)
+    moon_sign = moon.get('sign_es', '')
+    asc_sign = chart['angles']['asc'].get('sign_es', '')
+    sun_house = "Casa " + ROMAN[sun.get('house', 1) - 1]
+    moon_house = "Casa " + ROMAN[moon.get('house', 1) - 1]
+    regente = _REGENTE.get(sun_sign_en, 'Sol')
+    hl_signos = {sun_sign, moon_sign, asc_sign}
+    hl_casas = {sun_house, moon_house, "Casa I"}
+    hl_planetas = {"Sol", "Luna", regente}
+
+    b = []
+    b.append(("h2", pre.get('intro_titulo', 'Qué es una carta astral natal')))
+    for p in pre.get('intro', []):
+        b.append(("p", p))
+    b.append(("h2", "Los mandamientos zodiacales"))
+    b.append(("p", pre.get('mand_signos_intro', '')))
+    for k, v in pre.get('mand_signos', {}).items():
+        b.append(("item", k, v, k in hl_signos))
+    b.append(("p", pre.get('mand_casas_intro', '')))
+    for k, v in pre.get('mand_casas', {}).items():
+        b.append(("item", k, v, k in hl_casas))
+    b.append(("p", pre.get('mand_planetas_intro', '')))
+    for k, v in pre.get('mand_planetas', {}).items():
+        b.append(("item", k, v, k in hl_planetas))
+    b.append(("p", pre.get('mand_cierre', '')))
+    b.append(("p", pre.get('puente_cruz', '')))
+
+    # Cruz según el signo solar
+    cz = pre.get('cruces', {}).get(_CRUZ.get(sun_sign_en, 'fija'), {})
+    if cz:
+        otros = [s for s in cz.get('signos', []) if s != sun_sign]
+        b.append(("h2", cz.get('titulo', 'Tu cruz zodiacal')))
+        b.append(("p", "Inicio tu carta por decirte que, al ser %s, perteneces a una "
+                        "cruz conocida como %s, la cual decidiste antes de nacer que "
+                        "la tienes que formar en esta vida con las personas de los "
+                        "signos %s. Primero te digo qué es esta cruz zodiacal y luego "
+                        "vamos a tu caso particular."
+                  % (sun_sign, cz.get('titulo', '').upper(),
+                     ", ".join(otros[:-1]) + " y " + otros[-1] if len(otros) > 1 else "".join(otros))))
+        if cz.get('mision'):
+            b.append(("p", cz['mision']))
+        rep = cz.get('representacion', {})
+        if rep:
+            b.append(("p", "Representación particular: recuerda que tienes que formar "
+                            "esta cruz con personas de los siguientes signos."))
+            for sname, stext in rep.items():
+                b.append(("p", stext))
+        if cz.get('cierre'):
+            b.append(("p", cz['cierre']))
+
+    # Elemento según el signo solar
+    el = pre.get('elementos', {}).get(_ELEM.get(sun_sign_en, 'tierra'), {})
+    if el:
+        otros2 = [s for s in el.get('signos', []) if s != sun_sign]
+        b.append(("h2", el.get('titulo', 'Tu elemento')))
+        b.append(("p", "Como pudiste apreciar, %s pertenece al elemento %s de esa "
+                        "cruz y, por lo tanto, también decidiste antes de nacer que "
+                        "tienes que formar tu triángulo con los signos %s. Observa, "
+                        "entonces, qué significa el elemento al cual perteneces."
+                  % (sun_sign, el.get('titulo', '').replace('Elemento ', ''),
+                     " y ".join(otros2))))
+        for fld in ('mision', 'personaje', 'frase', 'descripcion'):
+            if el.get(fld):
+                b.append(("p", el[fld]))
+        for sname, stext in el.get('representacion', {}).items():
+            b.append(("p", stext))
+
+    if pre.get('cierre_preambulo'):
+        b.append(("p", pre['cierre_preambulo']))
+    if pre.get('puente_interpretacion'):
+        b.append(("p", pre['puente_interpretacion']))
+    return [x for x in b if not (x[0] == "p" and not x[1])]
+
+
+_LEGEND_PLANETS = [("aSol", "Sol"), ("aLuna", "Luna"), ("aMercurio", "Mercurio"),
+    ("aVenus", "Venus"), ("aTierra", "Tierra"), ("aMarte", "Marte"),
+    ("aJupiter", "Júpiter"), ("aSaturno", "Saturno"), ("aQuiron_", "—"),
+    ("aChiron", "Quirón"), ("aUrano", "Urano"), ("aNeptuno", "Neptuno"),
+    ("aPluton", "Plutón"), ("aNoduloNorte", "Nodo Norte"),
+    ("aNoduloSur", "Nodo Sur"), ("aLunaNegra", "Luna Negra"),
+    ("aRuedaFortuna", "R. Fortuna")]
+_LEGEND_SIGNS = [("Aries", "Aries"), ("Taurus", "Tauro"), ("Gemini", "Géminis"),
+    ("Cancer", "Cáncer"), ("Leo", "Leo"), ("Virgo", "Virgo"), ("Libra", "Libra"),
+    ("Scorpio", "Escorpio"), ("Sagittarius", "Sagitario"),
+    ("Capricorn", "Capricornio"), ("Aquarius", "Acuario"), ("Pisces", "Piscis")]
+
+
+def build_legend():
+    """[(título_grupo, [(ruta_icono, etiqueta), ...]), ...]"""
+    out = []
+    for gname, entries in (("Planetas y puntos", _LEGEND_PLANETS),
+                           ("Signos", _LEGEND_SIGNS)):
+        rows = []
+        for key, label in entries:
+            if label == "—":
+                continue
+            p = os.path.join(_ICONS_DIR, key + '.png')
+            if os.path.exists(p):
+                rows.append((p, label))
+        out.append((gname, rows))
+    return out
 
 
 def build_sections(chart):
@@ -157,7 +299,8 @@ def _png_from_dataurl(chart_png):
 #  PDF (reportlab)
 # ════════════════════════════════════════════════════════════════════════
 
-def render_pdf(title, intro, sections, chart_png_bytes, user_line):
+def render_pdf(title, intro, sections, chart_png_bytes, user_line,
+               pre_blocks=None, legend=None):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import cm
@@ -165,7 +308,8 @@ def render_pdf(title, intro, sections, chart_png_bytes, user_line):
     from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
     from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame,
                                     NextPageTemplate, Paragraph, Spacer,
-                                    PageBreak, Image, KeepTogether)
+                                    PageBreak, Image, KeepTogether, Table,
+                                    TableStyle)
 
     buf = io.BytesIO()
     page_w, page_h = A4
@@ -233,12 +377,31 @@ def render_pdf(title, intro, sections, chart_png_bytes, user_line):
 
     def on_body(cv, doc):
         cv.saveState()
-        cv.setFillColor(C.HexColor('#FBFAF6')); cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+        # página blanca
+        cv.setFillColor(C.HexColor(PAPER_BG)); cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+        # cabecera sutil: filete dorado corto centrado
+        cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.6)
+        cv.line(page_w / 2 - 40, page_h - tm * 0.55, page_w / 2 + 40, page_h - tm * 0.55)
+        # pie de página: filete + marca a la izquierda, página en rombo a la derecha
+        cv.setLineWidth(0.7)
+        cv.line(lm, bm * 0.72, page_w - rm, bm * 0.72)
+        cv.setFont(bf, 7.5); cv.setFillColor(C.HexColor(NAVY))
+        marca = 'REPORTE ASTRAL'
+        cv.drawString(lm, bm * 0.42, marca)
+        cv.setFont(it, 7.5); cv.setFillColor(C.HexColor(SLATE))
+        sub = '  ·  Carta Natal' + (('  ·  ' + user_line) if user_line else '')
+        cv.drawString(lm + cv.stringWidth(marca, bf, 7.5), bm * 0.42, sub)
+        # número de página con rombo dorado
+        num = str(doc.page)
+        cx = page_w - rm - 8
+        cy = bm * 0.46
+        r = 8.5
+        p = cv.beginPath()
+        p.moveTo(cx, cy + r); p.lineTo(cx + r, cy); p.lineTo(cx, cy - r); p.lineTo(cx - r, cy); p.close()
         cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.7)
-        cv.line(lm, bm * 0.7, page_w - rm, bm * 0.7)
-        cv.setFont(it, 8); cv.setFillColor(C.HexColor(SLATE))
-        cv.drawCentredString(page_w / 2, bm * 0.5, 'Reporte Astral')
-        cv.drawRightString(page_w - rm, bm * 0.5, str(doc.page))
+        cv.drawPath(p, fill=0, stroke=1)
+        cv.setFont(bf, 7.5); cv.setFillColor(C.HexColor(NAVY))
+        cv.drawCentredString(cx, cy - 2.6, num)
         cv.restoreState()
 
     frame = Frame(lm, bm, page_w - lm - rm, page_h - tm - bm)
@@ -249,13 +412,32 @@ def render_pdf(title, intro, sections, chart_png_bytes, user_line):
         PageTemplate(id='Body', frames=[frame], onPage=on_body),
     ])
 
+    st_item = ParagraphStyle('li', fontName=bf, fontSize=10.3, leading=16,
+                             textColor=C.HexColor(INK), leftIndent=14)
+
     flow = [NextPageTemplate('Body'), Spacer(1, page_h * 0.30),
             Paragraph(esc(title), st_title), Spacer(1, 14)]
     if user_line:
         flow.append(Paragraph(esc(user_line), st_sub))
     flow.append(PageBreak())
 
-    if intro:
+    # ── Preámbulo (Qué es una carta natal, mandamientos, cruz, elemento) ──
+    if pre_blocks:
+        for blk in pre_blocks:
+            if blk[0] == "h2":
+                flow.append(Paragraph(esc(blk[1]), st_h2))
+            elif blk[0] == "p":
+                flow.append(Paragraph(with_icons(blk[1], 8), st_body))
+            elif blk[0] == "item":
+                _, nm, tx, hl = blk
+                nm_markup = with_icons(nm, 8)
+                if hl:
+                    nm_markup = '<font color="%s"><b>%s</b></font>' % (RED, nm_markup)
+                else:
+                    nm_markup = '<b>%s</b>' % nm_markup
+                flow.append(Paragraph(nm_markup + ' — ' + esc(tx), st_item))
+        flow.append(PageBreak())
+    elif intro:
         flow.append(Paragraph(esc(intro), ParagraphStyle(
             'iB', fontName=it, fontSize=11.5, leading=18,
             textColor=C.HexColor(NAVY), alignment=TA_JUSTIFY, spaceAfter=14)))
@@ -270,9 +452,34 @@ def render_pdf(title, intro, sections, chart_png_bytes, user_line):
             flow.append(Paragraph("La carta", st_h2))
             flow.append(Spacer(1, 6))
             flow.append(Image(io.BytesIO(chart_png_bytes), width=disp_w, height=disp_h))
-            flow.append(PageBreak())
         except Exception:
             pass
+
+    # ── Leyenda de símbolos ─────────────────────────────────────────────
+    if legend:
+        flow.append(Paragraph("Leyenda de símbolos", st_h2))
+        st_leg = ParagraphStyle('lg', fontName=bf, fontSize=9,
+                                textColor=C.HexColor(INK))
+        for gname, rows in legend:
+            flow.append(Paragraph('<b>%s</b>' % esc(gname), st_h3))
+            cells, row = [], []
+            for icon, label in rows:
+                row.append(Paragraph(
+                    '<img src="%s" width="10" height="10" valign="-2"/> %s'
+                    % (icon, esc(label)), st_leg))
+                if len(row) == 4:
+                    cells.append(row); row = []
+            if row:
+                row += [Paragraph('', st_leg)] * (4 - len(row))
+                cells.append(row)
+            t = Table(cells, colWidths=[(page_w - lm - rm) / 4.0] * 4)
+            t.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 3),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ]))
+            flow.append(t)
+        flow.append(PageBreak())
 
     for sec_title, items in sections:
         flow.append(Paragraph(esc(sec_title), st_h2))
@@ -288,7 +495,8 @@ def render_pdf(title, intro, sections, chart_png_bytes, user_line):
 #  DOCX (python-docx)
 # ════════════════════════════════════════════════════════════════════════
 
-def render_docx(title, intro, sections, chart_png_bytes, user_line):
+def render_docx(title, intro, sections, chart_png_bytes, user_line,
+                pre_blocks=None, legend=None):
     from docx import Document
     from docx.shared import Pt, RGBColor, Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -322,7 +530,22 @@ def render_docx(title, intro, sections, chart_png_bytes, user_line):
         sp = doc.add_paragraph(); sp.alignment = WD_ALIGN_PARAGRAPH.CENTER
         rr = sp.add_run(user_line); rr.italic = True; rr.font.size = Pt(12)
         rr.font.color.rgb = RGBColor(0x8A, 0x93, 0xB5)
-    if intro:
+    if pre_blocks:
+        for blk in pre_blocks:
+            if blk[0] == "h2":
+                hp = doc.add_heading(level=1)
+                hr = hp.add_run(blk[1]); hr.font.color.rgb = RGBColor(0x1E, 0x24, 0x50)
+            elif blk[0] == "p":
+                bp = doc.add_paragraph(); bp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                add_text_with_icons(bp, blk[1])
+            elif blk[0] == "item":
+                _, nm, tx, hl = blk
+                ip = doc.add_paragraph()
+                ip.paragraph_format.left_indent = Inches(0.2)
+                col = RGBColor(0xB0, 0x20, 0x20) if hl else RGBColor(0x22, 0x28, 0x4A)
+                add_text_with_icons(ip, nm, bold=True, color=col)
+                ip.add_run(" — " + tx)
+    elif intro:
         pi = doc.add_paragraph(); pi.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         ri = pi.add_run(intro); ri.italic = True; ri.font.size = Pt(11.5)
 
@@ -333,6 +556,26 @@ def render_docx(title, intro, sections, chart_png_bytes, user_line):
             pic.add_run().add_picture(io.BytesIO(chart_png_bytes), width=Inches(5.6))
         except Exception:
             pass
+
+    if legend:
+        hp = doc.add_heading(level=1)
+        hr = hp.add_run("Leyenda de símbolos")
+        hr.font.color.rgb = RGBColor(0x1E, 0x24, 0x50)
+        for gname, rows in legend:
+            gp = doc.add_paragraph()
+            gr = gp.add_run(gname); gr.bold = True
+            gr.font.color.rgb = RGBColor(0x3A, 0x44, 0x88)
+            ncols = 4
+            nrows = (len(rows) + ncols - 1) // ncols
+            tbl = doc.add_table(rows=nrows, cols=ncols)
+            for i, (icon, label) in enumerate(rows):
+                cell = tbl.cell(i // ncols, i % ncols)
+                cp = cell.paragraphs[0]
+                try:
+                    cp.add_run().add_picture(icon, height=Inches(0.14))
+                except Exception:
+                    pass
+                cp.add_run("  " + label).font.size = Pt(9.5)
 
     for sec_title, items in sections:
         hp = doc.add_heading(level=1)
@@ -352,14 +595,18 @@ def render_docx(title, intro, sections, chart_png_bytes, user_line):
 def generate(chart, name, fmt, chart_png):
     """Punto de entrada. Devuelve (bytes, filename, mimetype)."""
     intro, sections = build_sections(chart)
+    pre_blocks = build_preamble(chart)
+    legend = build_legend()
     title = "Carta Natal"
     person = (name or '').strip()
     user_line = person if person else None
     png = _png_from_dataurl(chart_png)
     safe = "Reporte_Astral" + (("_" + person.replace(' ', '_')) if person else "")
     if fmt == 'docx':
-        data = render_docx(title, intro, sections, png, user_line)
+        data = render_docx(title, intro, sections, png, user_line,
+                           pre_blocks=pre_blocks, legend=legend)
         return data, safe + '.docx', \
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    data = render_pdf(title, intro, sections, png, user_line)
+    data = render_pdf(title, intro, sections, png, user_line,
+                      pre_blocks=pre_blocks, legend=legend)
     return data, safe + '.pdf', 'application/pdf'

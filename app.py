@@ -17,11 +17,14 @@ import json
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
+from typing import Optional
 
 import astro
+import report
 
-app = FastAPI(title="Diario Astral API", version="1.0.0",
+app = FastAPI(title="Reporte Astral API", version="1.1.0",
               description="Cálculo de cartas astrológicas con Swiss Ephemeris.")
 
 # ── CORS ────────────────────────────────────────────────────────────────
@@ -52,6 +55,12 @@ class BirthData(BaseModel):
 class TransitRequest(BaseModel):
     natal: BirthData
     transit: BirthData
+
+
+class ReportRequest(BirthData):
+    name: str = Field("", description="Nombre de la persona (opcional)")
+    format: str = Field("pdf", description="pdf | docx")
+    chart_png: Optional[str] = Field(None, description="Imagen de la rueda (data URL base64)")
 
 
 # ── Rutas ───────────────────────────────────────────────────────────────
@@ -92,6 +101,21 @@ def transits(req: TransitRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"No se pudo calcular: {e}")
+
+
+@app.post("/api/report")
+def make_report(req: ReportRequest):
+    """Genera el reporte natal interpretativo y lo devuelve como archivo
+    descargable (PDF o DOCX). La web envía la imagen de la rueda en chart_png."""
+    try:
+        chart = astro.compute_chart(req.date, req.time, req.lat, req.lon,
+                                    req.tz, req.hsys)
+        fmt = (req.format or "pdf").lower()
+        data, filename, mime = report.generate(chart, req.name, fmt, req.chart_png)
+        return Response(content=data, media_type=mime, headers={
+            "Content-Disposition": 'attachment; filename="%s"' % filename})
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"No se pudo generar el reporte: {e}")
 
 
 @app.get("/api/interpretations")

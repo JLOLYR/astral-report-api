@@ -433,9 +433,17 @@ def render_pdf(sections, chart_png_bytes, meta,
     def _watermark_signs(cv):
         """Los 12 signos, sutiles y dorados, repartidos alrededor del margen."""
         import math
-        cx, cy = page_w / 2, page_h / 2
-        rx, ry = (page_w - 96) / 2, (page_h - 96) / 2
         sz = 24
+        # Los signos van holgadamente por dentro del marco dorado (que está a
+        # 44 pt del borde) y por encima del pie de portada, para que ninguno
+        # quede sobre una línea ni sobre un texto.
+        inset = 44 + sz / 2 + 12
+        top_y = page_h - inset          # justo dentro del marco superior
+        bot_y = 145                     # por encima de astrólogo/fecha/marca
+        cx = page_w / 2
+        cy = (top_y + bot_y) / 2.0
+        rx = page_w / 2 - inset
+        ry = (top_y - bot_y) / 2.0
         for i, sg in enumerate(_WM_SIGNS):
             fp = os.path.join(_ICONS_DIR, 'wm_' + sg + '.png')
             if not os.path.exists(fp):
@@ -591,6 +599,38 @@ def render_pdf(sections, chart_png_bytes, meta,
                 content.append(Paragraph(nm_markup + ' — ' + esc(tx), st_item))
         content.append(PageBreak())
 
+    legend_done = [False]
+
+    def add_legend(ncols=4, total_w=None, fs=9, ic_sz=10):
+        """Leyenda de símbolos. En la página apaisada se usa con más columnas."""
+        if not legend:
+            return
+        tw = total_w if total_w else (page_w - lm - rm)
+        H3("Leyenda de símbolos")
+        st_leg = ParagraphStyle('lg%d' % ncols, fontName=bf, fontSize=fs,
+                                textColor=C.HexColor(INK))
+        for gname, rows in legend:
+            content.append(Paragraph('<b>%s</b>' % esc(gname), ParagraphStyle(
+                'lgt%d' % ncols, fontName=bd, fontSize=fs + 1,
+                textColor=C.HexColor(BLUE), spaceBefore=3, spaceAfter=1)))
+            cells, row = [], []
+            for icon, label in rows:
+                row.append(Paragraph(
+                    '<img src="%s" width="%d" height="%d" valign="-2"/> %s'
+                    % (icon, ic_sz, ic_sz, esc(label)), st_leg))
+                if len(row) == ncols:
+                    cells.append(row); row = []
+            if row:
+                row += [Paragraph('', st_leg)] * (ncols - len(row))
+                cells.append(row)
+            t = Table(cells, colWidths=[tw / float(ncols)] * ncols)
+            t.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 2),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ]))
+            content.append(t)
+
     if chart_png_bytes:
         try:
             from PIL import Image as PILImage
@@ -598,12 +638,17 @@ def render_pdf(sections, chart_png_bytes, meta,
             if chart_png2_bytes and caps:
                 # Ambas ruedas en UNA página apaisada, lado a lado, grandes,
                 # para poder compararlas.
-                content.append(NextPageTemplate('Wheels'))
-                content.append(PageBreak())
+                # Evita una página en blanco si ya venía un salto de página
+                if content and isinstance(content[-1], PageBreak):
+                    content.insert(len(content) - 1, NextPageTemplate('Wheels'))
+                else:
+                    content.append(NextPageTemplate('Wheels'))
+                    content.append(PageBreak())
                 H2(meta.get('chart_heading', 'Tus dos cartas'))
                 content.append(Spacer(1, 4))
                 colw = (land_w - lm - rm) / 2.0
-                each = min(colw - 0.5 * cm, 12.4 * cm)
+                # Deja sitio para la leyenda en la misma página
+                each = min(colw - 0.5 * cm, 9.5 * cm)
                 st_wcap = ParagraphStyle('wcap', fontName=bd, fontSize=12, leading=15,
                                          textColor=C.HexColor(BLUE), alignment=TA_CENTER,
                                          spaceAfter=5)
@@ -619,6 +664,9 @@ def render_pdf(sections, chart_png_bytes, meta,
                 tw.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP'),
                                         ('ALIGN', (0, 0), (-1, -1), 'CENTER')]))
                 content.append(tw)
+                # La leyenda entra en la misma página apaisada
+                add_legend(ncols=8, total_w=land_w - lm - rm, fs=8, ic_sz=9)
+                legend_done[0] = True
                 content.append(NextPageTemplate('Body'))
                 content.append(PageBreak())
             else:
@@ -632,31 +680,8 @@ def render_pdf(sections, chart_png_bytes, meta,
         except Exception:
             pass
 
-    if legend:
-        H3("Leyenda de símbolos")
-        st_leg = ParagraphStyle('lg', fontName=bf, fontSize=9,
-                                textColor=C.HexColor(INK))
-        for gname, rows in legend:
-            content.append(Paragraph('<b>%s</b>' % esc(gname), ParagraphStyle(
-                'lgt', fontName=bd, fontSize=10, textColor=C.HexColor(BLUE),
-                spaceBefore=6, spaceAfter=3)))
-            cells, row = [], []
-            for icon, label in rows:
-                row.append(Paragraph(
-                    '<img src="%s" width="10" height="10" valign="-2"/> %s'
-                    % (icon, esc(label)), st_leg))
-                if len(row) == 4:
-                    cells.append(row); row = []
-            if row:
-                row += [Paragraph('', st_leg)] * (4 - len(row))
-                cells.append(row)
-            t = Table(cells, colWidths=[(page_w - lm - rm) / 4.0] * 4)
-            t.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('TOPPADDING', (0, 0), (-1, -1), 3),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            ]))
-            content.append(t)
+    if legend and not legend_done[0]:
+        add_legend()
         content.append(PageBreak())
 
     for sec_title, items in sections:

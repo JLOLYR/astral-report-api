@@ -362,15 +362,32 @@ def build_legend():
     return out
 
 
-def _png_from_dataurl(chart_png):
+def _png_from_dataurl(chart_png, max_side=900):
+    """Decodifica la imagen y la reduce si viene muy grande. Acotar el tamaño
+    mantiene bajo el uso de memoria y el tiempo de generación en el servidor."""
     if not chart_png:
         return None
     try:
         if ',' in chart_png:
             chart_png = chart_png.split(',', 1)[1]
-        return base64.b64decode(chart_png)
+        raw = base64.b64decode(chart_png)
     except Exception:
         return None
+    try:
+        from PIL import Image as PILImage
+        im = PILImage.open(io.BytesIO(raw))
+        if max(im.size) > max_side:
+            ratio = max_side / float(max(im.size))
+            im = im.convert('RGB').resize(
+                (max(1, int(im.size[0] * ratio)), max(1, int(im.size[1] * ratio))),
+                PILImage.LANCZOS)
+            b = io.BytesIO()
+            im.save(b, 'PNG', optimize=True)
+            raw = b.getvalue()
+        im.close()
+    except Exception:
+        pass
+    return raw
 
 
 # ════════════════════════════════════════════════════════════════════════

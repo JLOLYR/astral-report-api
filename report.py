@@ -380,7 +380,7 @@ def _png_from_dataurl(chart_png):
 def render_pdf(sections, chart_png_bytes, meta,
                pre_blocks=None, legend=None, glossary=None, chart_png2_bytes=None):
     """meta: dict(name, city, astrologer, date, time)"""
-    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import cm
     from reportlab.lib import colors as C
@@ -519,6 +519,30 @@ def render_pdf(sections, chart_png_bytes, meta,
         cv.drawCentredString(cx2, cy2 - 2.6, num)
         cv.restoreState()
 
+    # Página apaisada (para comparar las dos ruedas lado a lado, grandes)
+    land_w, land_h = landscape(A4)
+
+    def on_wheels(cv, doc):
+        cv.saveState()
+        cv.setFillColor(C.HexColor(PAPER_BG)); cv.rect(0, 0, land_w, land_h, fill=1, stroke=0)
+        cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.7)
+        cv.line(lm, bm * 0.72, land_w - rm, bm * 0.72)
+        cv.setFont(bf, 7.5); cv.setFillColor(C.HexColor(NAVY))
+        marca = 'REPORTE ASTRAL'
+        cv.drawString(lm, bm * 0.42, marca)
+        cv.setFont(it, 7.5); cv.setFillColor(C.HexColor(SLATE))
+        _tipo = meta.get('subtitle', 'de Carta Natal')
+        if _tipo.lower().startswith('de '):
+            _tipo = _tipo[3:]
+        sub = '  ·  ' + _tipo + (('  ·  ' + person) if person else '')
+        cv.drawString(lm + cv.stringWidth(marca, bf, 7.5), bm * 0.42, sub)
+        cx2 = land_w - rm - 8
+        cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.7)
+        _diamond(cv, cx2, bm * 0.46, 8.5)
+        cv.setFont(bf, 7.5); cv.setFillColor(C.HexColor(NAVY))
+        cv.drawCentredString(cx2, bm * 0.46 - 2.6, str(doc.page))
+        cv.restoreState()
+
     class _Doc(BaseDocTemplate):
         def afterFlowable(self, f):
             key = getattr(f, '_tocKey', None)
@@ -527,11 +551,13 @@ def render_pdf(sections, chart_png_bytes, meta,
                 self.notify('TOCEntry', (lvl, f.getPlainText(), self.page, key))
 
     frame = Frame(lm, bm, page_w - lm - rm, page_h - tm - bm)
+    frame_land = Frame(lm, bm, land_w - lm - rm, land_h - tm * 0.7 - bm)
     doc = _Doc(buf, pagesize=A4, leftMargin=lm, rightMargin=rm,
                topMargin=tm, bottomMargin=bm)
     doc.addPageTemplates([
         PageTemplate(id='Cover', frames=[Frame(lm, bm, page_w - lm - rm, page_h - tm - bm)], onPage=on_cover),
         PageTemplate(id='Body', frames=[frame], onPage=on_body),
+        PageTemplate(id='Wheels', frames=[frame_land], onPage=on_wheels, pagesize=landscape(A4)),
     ])
 
     nkey = [0]
@@ -570,21 +596,31 @@ def render_pdf(sections, chart_png_bytes, meta,
             from PIL import Image as PILImage
             caps = meta.get('img_captions')
             if chart_png2_bytes and caps:
-                # Dos ruedas grandes, cada una a su tamaño (mejor aprovechamiento)
+                # Ambas ruedas en UNA página apaisada, lado a lado, grandes,
+                # para poder compararlas.
+                content.append(NextPageTemplate('Wheels'))
+                content.append(PageBreak())
                 H2(meta.get('chart_heading', 'Tus dos cartas'))
+                content.append(Spacer(1, 4))
+                colw = (land_w - lm - rm) / 2.0
+                each = min(colw - 0.5 * cm, 12.4 * cm)
+                st_wcap = ParagraphStyle('wcap', fontName=bd, fontSize=12, leading=15,
+                                         textColor=C.HexColor(BLUE), alignment=TA_CENTER,
+                                         spaceAfter=5)
+                row = []
                 for img_bytes, cap in ((chart_png_bytes, caps[0]),
                                        (chart_png2_bytes, caps[1])):
                     im = PILImage.open(io.BytesIO(img_bytes))
                     iw, ih = im.size
-                    disp_w = min(page_w - lm - rm, 15.5 * cm)
-                    disp_h = disp_w * ih / iw
-                    max_h = 20 * cm
-                    if disp_h > max_h:
-                        disp_h = max_h; disp_w = disp_h * iw / ih
-                    H3(cap)
-                    content.append(Spacer(1, 4))
-                    content.append(Image(io.BytesIO(img_bytes), width=disp_w, height=disp_h))
-                    content.append(Spacer(1, 10))
+                    w = each; h = w * ih / iw
+                    row.append([Paragraph(cap, st_wcap),
+                                Image(io.BytesIO(img_bytes), width=w, height=h)])
+                tw = Table([row], colWidths=[colw, colw])
+                tw.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                                        ('ALIGN', (0, 0), (-1, -1), 'CENTER')]))
+                content.append(tw)
+                content.append(NextPageTemplate('Body'))
+                content.append(PageBreak())
             else:
                 im = PILImage.open(io.BytesIO(chart_png_bytes))
                 iw, ih = im.size
@@ -906,15 +942,32 @@ def render_docx(sections, chart_png_bytes, meta,
     if chart_png_bytes:
         caps = meta.get('img_captions')
         if chart_png2_bytes and caps:
+            # Ambas ruedas en una página apaisada, lado a lado, para compararlas.
+            from docx.enum.section import WD_ORIENT, WD_SECTION
+            sec = doc.add_section(WD_SECTION.NEW_PAGE)
+            sec.orientation = WD_ORIENT.LANDSCAPE
+            if sec.page_width < sec.page_height:
+                sec.page_width, sec.page_height = sec.page_height, sec.page_width
+            sec.left_margin = sec.right_margin = Inches(0.6)
+            sec.top_margin = sec.bottom_margin = Inches(0.7)
             H2(meta.get('chart_heading', 'Tus dos cartas'))
-            for img_bytes, cap in ((chart_png_bytes, caps[0]),
-                                   (chart_png2_bytes, caps[1])):
-                H3(cap)
-                pic = doc.add_paragraph(); pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            tbl = doc.add_table(rows=1, cols=2)
+            for j, (img_bytes, cap) in enumerate(((chart_png_bytes, caps[0]),
+                                                  (chart_png2_bytes, caps[1]))):
+                cell = tbl.cell(0, j)
+                cp = cell.paragraphs[0]; cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                cr = cp.add_run(cap); cr.bold = True; cr.font.color.rgb = BLUE_RGB
+                ip = cell.add_paragraph(); ip.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 try:
-                    pic.add_run().add_picture(io.BytesIO(img_bytes), width=Inches(6.2))
+                    ip.add_run().add_picture(io.BytesIO(img_bytes), width=Inches(4.7))
                 except Exception:
                     pass
+            sec2 = doc.add_section(WD_SECTION.NEW_PAGE)
+            sec2.orientation = WD_ORIENT.PORTRAIT
+            if sec2.page_width > sec2.page_height:
+                sec2.page_width, sec2.page_height = sec2.page_height, sec2.page_width
+            sec2.left_margin = sec2.right_margin = Inches(1)
+            sec2.top_margin = sec2.bottom_margin = Inches(1)
         else:
             H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
             pic = doc.add_paragraph(); pic.alignment = WD_ALIGN_PARAGRAPH.CENTER

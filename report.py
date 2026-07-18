@@ -588,8 +588,11 @@ def render_pdf(sections, chart_png_bytes, meta,
                                          fontName=si, fontSize=13,
                                          textColor=C.HexColor(BLUE))))
         for r in redes:
+            ic = os.path.join(_ICONS_DIR, 'soc_' + r.get('icon', '') + '.png')
+            ic_markup = ('<img src="%s" width="13" height="13" valign="-2"/> ' % ic) \
+                if os.path.exists(ic) else ''
             content.append(Paragraph(
-                '<b>%s</b> — <a href="%s" color="%s"><u>%s</u></a>'
+                ic_markup + '<b>%s</b> — <a href="%s" color="%s"><u>%s</u></a>'
                 % (esc(r.get('nombre', '')), r.get('url', '#'), BLUE,
                    esc(r.get('texto', r.get('url', '')))), st_red))
 
@@ -826,6 +829,13 @@ def render_docx(sections, chart_png_bytes, meta,
             cover_line(astrologer, 13, BLUE_RGB, italic=True)
         for r in redes:
             p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            ic = os.path.join(_ICONS_DIR, 'soc_' + r.get('icon', '') + '.png')
+            if os.path.exists(ic):
+                try:
+                    p.add_run().add_picture(ic, height=Inches(0.15))
+                    p.add_run('  ')
+                except Exception:
+                    pass
             rr = p.add_run(r.get('nombre', '') + ' — '); rr.bold = True
             rr.font.color.rgb = INK_RGB
             ext_link(p, r.get('url', '#'), r.get('texto', r.get('url', '')))

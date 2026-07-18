@@ -1,13 +1,13 @@
 {
-  "_meta": {"nota": "Datos de marca del reporte. Edita aquí el astrólogo por defecto y las redes sociales."},
+  "_meta": {"nota": "Datos de marca del reporte. Edita aquí el astrólogo por defecto y las redes sociales. 'icon' referencia a icons/soc_<icon>.png."},
   "astrologo_default": "Mauricio Puerta",
-  "redes_titulo": "Encuéntrame en",
+  "redes_titulo": "Redes sociales",
   "redes": [
-    {"nombre": "Página web", "url": "https://www.mauriciopuerta.tv/", "texto": "www.mauriciopuerta.tv"},
-    {"nombre": "YouTube", "url": "https://www.youtube.com/user/CodigosTV", "texto": "youtube.com/user/CodigosTV"},
-    {"nombre": "Instagram", "url": "https://www.instagram.com/mauriciopuertaoficial/", "texto": "@mauriciopuertaoficial"},
-    {"nombre": "Facebook", "url": "https://www.facebook.com/mauriciopuerta.tv", "texto": "facebook.com/mauriciopuerta.tv"},
-    {"nombre": "X (Twitter)", "url": "https://x.com/MauricioPuerta1", "texto": "@MauricioPuerta1"},
-    {"nombre": "TikTok", "url": "https://www.tiktok.com/@mauriciopuertaoficial", "texto": "@mauriciopuertaoficial"}
+    {"nombre": "Página web", "url": "https://www.mauriciopuerta.tv/", "texto": "www.mauriciopuerta.tv", "icon": "web"},
+    {"nombre": "YouTube", "url": "https://www.youtube.com/user/CodigosTV", "texto": "youtube.com/user/CodigosTV", "icon": "youtube"},
+    {"nombre": "Instagram", "url": "https://www.instagram.com/mauriciopuertaoficial/", "texto": "@mauriciopuertaoficial", "icon": "instagram"},
+    {"nombre": "Facebook", "url": "https://www.facebook.com/mauriciopuerta.tv", "texto": "facebook.com/mauriciopuerta.tv", "icon": "facebook"},
+    {"nombre": "X (Twitter)", "url": "https://x.com/MauricioPuerta1", "texto": "@MauricioPuerta1", "icon": "x"},
+    {"nombre": "TikTok", "url": "https://www.tiktok.com/@mauriciopuertaoficial", "texto": "@mauriciopuertaoficial", "icon": "tiktok"}
   ]
 }

@@ -33,6 +33,14 @@ PAPER_BG = '#FFFFFF'
 LIGHT = '#E8ECF8'
 
 ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII']
+
+_NAME_BY_KEY = {
+    'aSol': 'Sol', 'aLuna': 'Luna', 'aMercurio': 'Mercurio', 'aVenus': 'Venus',
+    'aMarte': 'Marte', 'aJupiter': 'Júpiter', 'aSaturno': 'Saturno',
+    'aUrano': 'Urano', 'aNeptuno': 'Neptuno', 'aPluton': 'Plutón',
+    'aChiron': 'Quirón', 'aNoduloNorte': 'Nodo Norte', 'aNoduloSur': 'Nodo Sur',
+    'aLunaNegra': 'Luna Negra', 'aRuedaFortuna': 'Parte de la Fortuna',
+}
 MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
          'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
@@ -135,16 +143,30 @@ _ELEM = {"Aries": "fuego", "Leo": "fuego", "Sagittarius": "fuego",
 
 # ── Secciones interpretativas ───────────────────────────────────────────
 
-def build_sections(chart):
+def build_sections(chart, chart_type='natal', house_key='house', aspects=None):
+    """Construye las secciones interpretativas de una carta.
+    chart_type: elige la introducción por tipo (natal/transit/solar_return/…).
+    house_key: 'house' (casas propias) o 'natal_house' (para tránsitos).
+    aspects: lista de aspectos a interpretar; por defecto los de la carta."""
     interp = _interp()
     nat = interp.get('natal', {})
     fb = interp.get('aspect_fallback', {}).get('natal', {})
-    intro = interp.get('by_chart_type', {}).get('natal', {}).get('intro', '')
+    bct = interp.get('by_chart_type', {})
+    intro = bct.get(chart_type, {}).get('intro', '') or bct.get('natal', {}).get('intro', '')
+
+    # Encabezados por tipo de carta
+    PL_HEAD = {'natal': "Los planetas en tu carta natal",
+               'transit': "Los planetas en tránsito",
+               'solar_return': "Los planetas de tu retorno solar",
+               'progressed': "Los planetas de tu carta progresada",
+               'combined': "Los planetas de la carta combinada"}
+    ASP_HEAD = {'transit': "Aspectos del tránsito a tu carta natal"}
 
     sections = []
     items = []
     for p in chart['planets']:
-        key, sign_en, house = p['key'], p['sign'], p['house']
+        key, sign_en = p['key'], p['sign']
+        house = p.get(house_key, p.get('house', 1))
         title = "%s en %s · Casa %s" % (p['name'], p.get('sign_es', sign_en), ROMAN[house - 1])
         paras = []
         t_sign = nat.get('planet_in_sign', {}).get(key, {}).get(sign_en)
@@ -156,7 +178,7 @@ def build_sections(chart):
         if paras:
             items.append((title, paras))
     if items:
-        sections.append(("Los planetas en tu carta natal", items))
+        sections.append((PL_HEAD.get(chart_type, PL_HEAD['natal']), items))
 
     cusp_items = []
     for h in chart['houses']:
@@ -171,19 +193,25 @@ def build_sections(chart):
     asp_es = {'Conjunction': 'conjunción', 'Opposition': 'oposición', 'Trine': 'trígono',
               'Square': 'cuadratura', 'Sextile': 'sextil'}
     asp_items = []
-    for a in chart['aspects']:
+    asp_source = aspects if aspects is not None else chart['aspects']
+    for a in asp_source:
         ka, kb, typ = a['a'], a['b'], a['type']
         txt = (asp.get(ka, {}).get(typ, {}).get(kb)
                or asp.get(kb, {}).get(typ, {}).get(ka)
                or fb.get(typ))
         if not txt:
             continue
-        title = "%s %s %s  (orbe %.1f°)" % (
-            name_es.get(ka, ka), asp_es.get(typ, typ.lower()),
-            name_es.get(kb, kb), a.get('orb', 0))
+        na = name_es.get(ka) or _NAME_BY_KEY.get(ka, ka)
+        nb = name_es.get(kb) or _NAME_BY_KEY.get(kb, kb)
+        if chart_type == 'transit':
+            title = "%s (tránsito) %s %s (natal)  (orbe %.1f°)" % (
+                na, asp_es.get(typ, typ.lower()), nb, a.get('orb', 0))
+        else:
+            title = "%s %s %s  (orbe %.1f°)" % (
+                na, asp_es.get(typ, typ.lower()), nb, a.get('orb', 0))
         asp_items.append((title, [txt]))
     if asp_items:
-        sections.append(("Aspectos astrales", asp_items))
+        sections.append((ASP_HEAD.get(chart_type, "Aspectos astrales"), asp_items))
 
     return intro, sections
 
@@ -519,7 +547,7 @@ def render_pdf(sections, chart_png_bytes, meta,
             iw, ih = im.size
             disp_w = min(page_w - lm - rm, 15 * cm)
             disp_h = disp_w * ih / iw
-            H2("Carta natal: el libreto de tu vida")
+            H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
             content.append(Spacer(1, 6))
             content.append(Image(io.BytesIO(chart_png_bytes), width=disp_w, height=disp_h))
         except Exception:
@@ -619,7 +647,7 @@ def render_pdf(sections, chart_png_bytes, meta,
     flow = [NextPageTemplate('Body'), Spacer(1, page_h * 0.24),
             Paragraph('Reporte Astrológico', st_cv1),
             Spacer(1, 4),
-            Paragraph('de Carta Natal', st_cv2),
+            Paragraph(esc(meta.get('subtitle', 'de Carta Natal')), st_cv2),
             Spacer(1, 34)]
     if person:
         flow.append(Paragraph(esc(person), st_cv3))
@@ -724,7 +752,7 @@ def render_docx(sections, chart_png_bytes, meta,
     for _ in range(4):
         doc.add_paragraph()
     cover_line('Reporte Astrológico', 28, GOLD_RGB, bold=True)
-    cover_line('de Carta Natal', 15, SLATE_RGB, italic=True, space_after=22)
+    cover_line(meta.get('subtitle', 'de Carta Natal'), 15, SLATE_RGB, italic=True, space_after=22)
     if person:
         cover_line(person, 17, NAVY_RGB, bold=True, space_after=10)
     linea = (meta.get('time', '') + '  —  ' if meta.get('time') else '') + fecha_es(meta.get('date', ''))
@@ -777,7 +805,7 @@ def render_docx(sections, chart_png_bytes, meta,
                 item_p(blk[1], blk[2], blk[3])
 
     if chart_png_bytes:
-        H2("Carta natal: el libreto de tu vida")
+        H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
         pic = doc.add_paragraph(); pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
         try:
             pic.add_run().add_picture(io.BytesIO(chart_png_bytes), width=Inches(5.6))
@@ -847,10 +875,76 @@ def render_docx(sections, chart_png_bytes, meta,
 #  ORQUESTACIÓN
 # ════════════════════════════════════════════════════════════════════════
 
-def generate(chart, name, fmt, chart_png, city="", astrologer=""):
-    """Punto de entrada. Devuelve (bytes, filename, mimetype)."""
-    _intro, sections = build_sections(chart)
-    pre_blocks = build_preamble(chart)
+_SUBTITLE = {
+    'natal': 'de Carta Natal', 'transit': 'de Tránsitos',
+    'solar_return': 'de Retorno Solar', 'progressed': 'de Carta Progresada',
+    'combined': 'de Carta Combinada',
+}
+_CHART_HEADING = {
+    'natal': 'Carta natal: el libreto de tu vida',
+    'transit': 'Bi-rueda: tu carta natal (interior) y los tránsitos (exterior)',
+    'solar_return': 'Tus dos cartas: natal y retorno solar',
+    'progressed': 'Tus dos cartas: natal y progresada',
+    'combined': 'La carta combinada del vínculo',
+}
+_INTRO_TITLE = {
+    'transit': 'Qué son los tránsitos',
+    'solar_return': 'Qué es el retorno solar',
+    'progressed': 'Qué es la carta progresada',
+    'combined': 'Qué es la carta combinada',
+}
+
+
+def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="natal"):
+    """Punto de entrada. Devuelve (bytes, filename, mimetype).
+
+    `data` es el dict que devuelve astro para el tipo pedido:
+      natal        → la carta natal
+      transit      → {natal, transit, cross_aspects}
+      solar_return → {natal, solar_return, year}
+      progressed   → {natal, progressed, years}
+      combined     → {a, b, combined}
+    """
+    ct = chart_type or "natal"
+
+    if ct == "transit":
+        chart = data['transit']
+        base_meta = data.get('natal', chart)
+        xa = [{'a': x['transit'], 'b': x['natal'], 'type': x['type'], 'orb': x['orb']}
+              for x in data.get('cross_aspects', [])]
+        _intro, sections = build_sections(chart, 'transit',
+                                          house_key='natal_house', aspects=xa)
+    elif ct == "solar_return":
+        chart = data['solar_return']
+        base_meta = data.get('natal', chart)
+        _intro, sections = build_sections(chart, 'solar_return')
+    elif ct == "progressed":
+        chart = data['progressed']
+        base_meta = data.get('natal', chart)
+        _intro, sections = build_sections(chart, 'progressed')
+    elif ct == "combined":
+        chart = data['combined']
+        base_meta = data.get('a', chart)
+        _intro, sections = build_sections(chart, 'combined')
+    else:
+        ct = "natal"
+        chart = data
+        base_meta = data
+        _intro, sections = build_sections(chart, 'natal')
+
+    if ct == "natal":
+        pre_blocks = build_preamble(chart)
+    else:
+        pre_blocks = []
+        if _INTRO_TITLE.get(ct):
+            pre_blocks.append(("h2", _INTRO_TITLE[ct]))
+        if _intro:
+            pre_blocks.append(("p", _intro))
+
+    subtitle = _SUBTITLE.get(ct, 'de Carta Natal')
+    if ct == 'solar_return' and data.get('year'):
+        subtitle += ' %s' % data['year']
+
     legend = build_legend()
     glossary = build_glossary()
     person = (name or '').strip()
@@ -858,16 +952,19 @@ def generate(chart, name, fmt, chart_png, city="", astrologer=""):
         'name': person,
         'city': (city or '').strip(),
         'astrologer': (astrologer or '').strip(),
-        'date': chart.get('input', {}).get('date', ''),
-        'time': chart.get('input', {}).get('time', ''),
+        'date': base_meta.get('input', {}).get('date', ''),
+        'time': base_meta.get('input', {}).get('time', ''),
+        'subtitle': subtitle,
+        'chart_heading': _CHART_HEADING.get(ct, 'Carta natal'),
     }
     png = _png_from_dataurl(chart_png)
-    safe = "Reporte_Astral" + (("_" + person.replace(' ', '_')) if person else "")
+    tsuf = '' if ct == 'natal' else ('_' + ct)
+    safe = "Reporte_Astral" + (("_" + person.replace(' ', '_')) if person else "") + tsuf
     if fmt == 'docx':
-        data = render_docx(sections, png, meta,
-                           pre_blocks=pre_blocks, legend=legend, glossary=glossary)
-        return data, safe + '.docx', \
+        out = render_docx(sections, png, meta,
+                          pre_blocks=pre_blocks, legend=legend, glossary=glossary)
+        return out, safe + '.docx', \
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    data = render_pdf(sections, png, meta,
-                      pre_blocks=pre_blocks, legend=legend, glossary=glossary)
-    return data, safe + '.pdf', 'application/pdf'
+    out = render_pdf(sections, png, meta,
+                     pre_blocks=pre_blocks, legend=legend, glossary=glossary)
+    return out, safe + '.pdf', 'application/pdf'

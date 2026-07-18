@@ -52,17 +52,49 @@ class BirthData(BaseModel):
     hsys: str = Field("P", description="Sistema de casas (P=Placidus)")
 
 
+class Reloc(BaseModel):
+    lat: float
+    lon: float
+    tz: str = ""
+
+
 class TransitRequest(BaseModel):
     natal: BirthData
     transit: BirthData
 
 
-class ReportRequest(BirthData):
-    name: str = Field("", description="Nombre de la persona (opcional)")
+class SolarReturnRequest(BaseModel):
+    natal: BirthData
+    year: int
+    reloc: Optional[Reloc] = None
+
+
+class ProgressedRequest(BaseModel):
+    natal: BirthData
+    target_date: str = Field(..., examples=["2026-01-01"], description="Fecha objetivo AAAA-MM-DD")
+
+
+class CombinedRequest(BaseModel):
+    person_a: BirthData
+    person_b: BirthData
+
+
+class ReportRequest(BaseModel):
+    chart_type: str = Field("natal",
+        description="natal | transit | solar_return | progressed | combined")
     format: str = Field("pdf", description="pdf | docx")
     chart_png: Optional[str] = Field(None, description="Imagen de la rueda (data URL base64)")
+    name: str = Field("", description="Nombre de la persona (opcional)")
     city: str = Field("", description="Ciudad y país de nacimiento (texto libre)")
     astrologer: str = Field("", description="Nombre del astrólogo (opcional)")
+    # Cargas útiles según el tipo (todas opcionales)
+    natal: Optional[BirthData] = None
+    transit: Optional[BirthData] = None
+    year: Optional[int] = None
+    reloc: Optional[Reloc] = None
+    target_date: Optional[str] = None
+    person_a: Optional[BirthData] = None
+    person_b: Optional[BirthData] = None
 
 
 # ── Rutas ───────────────────────────────────────────────────────────────
@@ -105,18 +137,76 @@ def transits(req: TransitRequest):
         raise HTTPException(status_code=400, detail=f"No se pudo calcular: {e}")
 
 
+def _bd(b):
+    return {"date": b.date, "time": b.time, "lat": b.lat, "lon": b.lon,
+            "tz": b.tz, "hsys": b.hsys}
+
+
+@app.post("/api/solar_return")
+def solar_return(req: SolarReturnRequest):
+    try:
+        reloc = None
+        if req.reloc:
+            reloc = {"lat": req.reloc.lat, "lon": req.reloc.lon, "tz": req.reloc.tz}
+        return astro.compute_solar_return(_bd(req.natal), req.year, reloc)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"No se pudo calcular: {e}")
+
+
+@app.post("/api/progressed")
+def progressed(req: ProgressedRequest):
+    try:
+        return astro.compute_progressed(_bd(req.natal), req.target_date)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"No se pudo calcular: {e}")
+
+
+@app.post("/api/combined")
+def combined(req: CombinedRequest):
+    try:
+        return astro.compute_combined(_bd(req.person_a), _bd(req.person_b))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"No se pudo calcular: {e}")
+
+
 @app.post("/api/report")
 def make_report(req: ReportRequest):
-    """Genera el reporte natal interpretativo y lo devuelve como archivo
-    descargable (PDF o DOCX). La web envía la imagen de la rueda en chart_png."""
+    """Genera el reporte interpretativo (natal, tránsitos, retorno solar,
+    progresada o combinada) y lo devuelve como archivo descargable (PDF o DOCX).
+    La web envía la imagen de la rueda ya compuesta en chart_png."""
     try:
-        chart = astro.compute_chart(req.date, req.time, req.lat, req.lon,
-                                    req.tz, req.hsys)
+        ct = (req.chart_type or "natal").lower()
+        if ct == "natal":
+            if not req.natal:
+                raise ValueError("Faltan los datos natales.")
+            data = astro.compute_chart(**_bd(req.natal))
+        elif ct == "transit":
+            if not (req.natal and req.transit):
+                raise ValueError("Faltan datos natales o de tránsito.")
+            data = astro.compute_transits(_bd(req.natal), _bd(req.transit))
+        elif ct == "solar_return":
+            if not req.natal or req.year is None:
+                raise ValueError("Faltan datos natales o el año del retorno.")
+            reloc = None
+            if req.reloc:
+                reloc = {"lat": req.reloc.lat, "lon": req.reloc.lon, "tz": req.reloc.tz}
+            data = astro.compute_solar_return(_bd(req.natal), req.year, reloc)
+        elif ct == "progressed":
+            if not (req.natal and req.target_date):
+                raise ValueError("Faltan datos natales o la fecha objetivo.")
+            data = astro.compute_progressed(_bd(req.natal), req.target_date)
+        elif ct == "combined":
+            if not (req.person_a and req.person_b):
+                raise ValueError("Faltan los datos de una de las personas.")
+            data = astro.compute_combined(_bd(req.person_a), _bd(req.person_b))
+        else:
+            raise ValueError("Tipo de carta no reconocido: %s" % ct)
+
         fmt = (req.format or "pdf").lower()
-        data, filename, mime = report.generate(chart, req.name, fmt, req.chart_png,
-                                               city=req.city,
-                                               astrologer=req.astrologer)
-        return Response(content=data, media_type=mime, headers={
+        out, filename, mime = report.generate(
+            data, req.name, fmt, req.chart_png,
+            city=req.city, astrologer=req.astrologer, chart_type=ct)
+        return Response(content=out, media_type=mime, headers={
             "Content-Disposition": 'attachment; filename="%s"' % filename})
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"No se pudo generar el reporte: {e}")

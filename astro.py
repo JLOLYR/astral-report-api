@@ -240,6 +240,20 @@ def compute_chart(date, time, lat, lon, tz, hsys='P'):
     }
 
 
+def _cross_aspects(a_pos, b_pos, a_label='transit', b_label='natal'):
+    out = []
+    for ak, al in a_pos.items():
+        for bk, bl in b_pos.items():
+            d = _angle_diff(al, bl)
+            for en, es, ang, orb in ASPECTS:
+                if abs(d - ang) <= orb:
+                    out.append({a_label: ak, b_label: bk, 'type': en,
+                                'type_es': es, 'angle': ang,
+                                'orb': round(abs(d - ang), 2)})
+                    break
+    return out
+
+
 def compute_transits(natal, transit):
     """natal/transit = dicts con date,time,lat,lon,tz. Devuelve la carta natal,
     los planetas transitando y los aspectos tránsito→natal."""
@@ -251,14 +265,115 @@ def compute_transits(natal, transit):
     # planetas en tránsito ubicados en las casas natales
     for p in trans['planets']:
         p['natal_house'] = _house_of(p['lon'], natal_cusps)
-    cross = []
-    for tk, tl in trans_pos.items():
-        for nk, nl in natal_pos.items():
-            d = _angle_diff(tl, nl)
-            for en, es, ang, orb in ASPECTS:
-                if abs(d - ang) <= orb:
-                    cross.append({'transit': tk, 'natal': nk, 'type': en,
-                                  'type_es': es, 'angle': ang,
-                                  'orb': round(abs(d - ang), 2)})
-                    break
-    return {'natal': base, 'transit': trans, 'cross_aspects': cross}
+    return {'natal': base, 'transit': trans,
+            'cross_aspects': _cross_aspects(trans_pos, natal_pos, 'transit', 'natal')}
+
+
+# ── Nombre legible por clave (para cartas ensambladas) ──────────────────
+_NAME_BY_KEY = {
+    'aSol': 'Sol', 'aLuna': 'Luna', 'aMercurio': 'Mercurio', 'aVenus': 'Venus',
+    'aMarte': 'Marte', 'aJupiter': 'Júpiter', 'aSaturno': 'Saturno',
+    'aUrano': 'Urano', 'aNeptuno': 'Neptuno', 'aPluton': 'Plutón',
+    'aChiron': 'Quirón', 'aNoduloNorte': 'Nodo Norte', 'aNoduloSur': 'Nodo Sur',
+    'aLunaNegra': 'Luna Negra', 'aRuedaFortuna': 'Parte de la Fortuna',
+}
+_ORDER = ['aSol', 'aLuna', 'aMercurio', 'aVenus', 'aMarte', 'aJupiter',
+          'aSaturno', 'aUrano', 'aNeptuno', 'aPluton', 'aChiron',
+          'aNoduloNorte', 'aNoduloSur', 'aLunaNegra', 'aRuedaFortuna']
+
+
+def _midpoint(a, b):
+    d = abs(a - b)
+    if d > 180:
+        if a > b:
+            a -= 360
+        else:
+            b -= 360
+    return (a + b) / 2 % 360
+
+
+def _assemble(positions, cusps, asc, mc, input_meta):
+    """Construye un chart-dict (mismo formato que compute_chart) a partir de
+    longitudes de planetas + cúspides + ángulos (para la carta combinada)."""
+    planets = []
+    for key in _ORDER:
+        if key in positions:
+            planets.append(_body(key, _NAME_BY_KEY.get(key, key),
+                                 positions[key], 0.0, cusps))
+    houses = []
+    for i, c in enumerate(cusps):
+        idx, sen, ses = _sign(c)
+        deg, minute = _dms(c)
+        houses.append({'num': i + 1, 'roman': ROMAN[i], 'lon': round(c, 4),
+                       'sign': sen, 'sign_es': ses, 'sign_index': idx + 1,
+                       'deg': deg, 'min': minute})
+    ang = {}
+    for nm, val in (('asc', asc), ('mc', mc)):
+        idx, sen, ses = _sign(val)
+        deg, minute = _dms(val)
+        ang[nm] = {'lon': round(val, 4), 'sign': sen, 'sign_es': ses,
+                   'deg': deg, 'min': minute}
+    return {'input': input_meta, 'angles': ang, 'houses': houses,
+            'planets': planets, 'aspects': _aspects(positions)}
+
+
+def compute_solar_return(natal, year, reloc=None):
+    """Retorno solar del año `year`. reloc={'lat','lon','tz'} para relocalizar."""
+    import swisseph as swe
+    base = compute_chart(**natal)
+    natal_sun = next(p['lon'] for p in base['planets'] if p['key'] == 'aSol')
+    ds = natal['date'].replace('-', '/').split('/')
+    bmonth, bday = int(ds[1]), int(ds[2])
+    jd = swe.julday(int(year), bmonth, bday, 12.0)
+    for _ in range(12):
+        lon = swe.calc_ut(jd, swe.SUN, _MOS)[0][0]
+        diff = ((natal_sun - lon + 180) % 360) - 180
+        if abs(diff) < 1e-7:
+            break
+        jd += diff / 0.9856
+    y, m, d, hd = swe.revjul(jd)
+    hh = int(hd); mm = int(round((hd - hh) * 60))
+    if mm == 60:
+        hh += 1; mm = 0
+    sr_date = '%04d/%02d/%02d' % (y, m, d)
+    sr_time = '%02d:%02d' % (hh, mm)
+    lat = (reloc or {}).get('lat', natal['lat'])
+    lon_ = (reloc or {}).get('lon', natal['lon'])
+    sr = compute_chart(sr_date, sr_time, lat, lon_, '+00:00', natal.get('hsys', 'P'))
+    sr['input']['label'] = 'Retorno solar %s (UT)' % year
+    return {'natal': base, 'solar_return': sr, 'year': int(year)}
+
+
+def compute_progressed(natal, target_date):
+    """Progresión secundaria: 1 día tras el nacimiento = 1 año de vida."""
+    from datetime import datetime, timedelta
+    base = compute_chart(**natal)
+    nd = datetime.strptime(natal['date'].replace('-', '/'), '%Y/%m/%d')
+    td = datetime.strptime(target_date.replace('-', '/'), '%Y/%m/%d')
+    years = (td - nd).days / 365.25
+    prog_dt = nd + timedelta(days=years)
+    prog_date = prog_dt.strftime('%Y/%m/%d')
+    prog = compute_chart(prog_date, natal['time'], natal['lat'], natal['lon'],
+                         natal['tz'], natal.get('hsys', 'P'))
+    prog['input']['label'] = 'Progresada a %s' % target_date
+    return {'natal': base, 'progressed': prog, 'years': round(years, 1)}
+
+
+def compute_combined(person_a, person_b):
+    """Carta combinada (composite de puntos medios) entre dos personas."""
+    ca = compute_chart(**person_a)
+    cb = compute_chart(**person_b)
+    pa = {p['key']: p['lon'] for p in ca['planets']}
+    pb = {p['key']: p['lon'] for p in cb['planets']}
+    positions = {}
+    for key in _ORDER:
+        if key in pa and key in pb:
+            positions[key] = _midpoint(pa[key], pb[key])
+    ha = {h['num']: h['lon'] for h in ca['houses']}
+    hb = {h['num']: h['lon'] for h in cb['houses']}
+    cusps = [_midpoint(ha[i + 1], hb[i + 1]) for i in range(12)]
+    asc = _midpoint(ca['angles']['asc']['lon'], cb['angles']['asc']['lon'])
+    mc = _midpoint(ca['angles']['mc']['lon'], cb['angles']['mc']['lon'])
+    comb = _assemble(positions, cusps, asc, mc,
+                     {'label': 'Carta combinada', 'house_system': 'Composite (puntos medios)'})
+    return {'a': ca, 'b': cb, 'combined': comb}

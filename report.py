@@ -3,27 +3,26 @@
 report.py — Genera el reporte astral interpretativo en PDF y DOCX.
 
 Estructura del documento:
-  Portada (azul noche, minimalista)
-  Índice de contenidos (con enlaces internos)
+  Portada (azul noche · tipografía serif · datos completos de la carta)
+  Índice de contenidos (con números de página y enlaces internos)
   1. Qué es una carta astral natal (+ mandamientos, cruz, elemento)
   2. Carta natal: el libreto de tu vida (rueda + leyenda de símbolos)
   3. Los planetas en tu carta natal
   4. Las cúspides de las casas
   5. Aspectos astrales
-  6. Glosario (signos, planetas y luminarias, casas)
-  Comentarios finales
+  6. Glosario · Comentarios finales
+  Redes sociales del astrólogo
 
-Textos: interpretations_es.json + preamble_es.json + glossary_es.json.
-Íconos propios (./icons) junto a cada nombre de planeta o signo.
+Textos: interpretations_es.json + preamble_es.json + glossary_es.json + brand_es.json.
 """
 import os
 import io
 import json
 import base64
+from datetime import date as _date
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
 
-# Paleta "Cielo Nocturno"
 GOLD = '#C9A24B'
 NAVY = '#1E2450'
 BLUE = '#3A4488'
@@ -31,8 +30,21 @@ SLATE = '#8A93B5'
 INK = '#22284A'
 RED = '#B02020'
 PAPER_BG = '#FFFFFF'
+LIGHT = '#E8ECF8'
 
 ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII']
+MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+         'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+
+def fecha_es(iso):
+    """'1988-09-28' → '28 de septiembre de 1988'."""
+    try:
+        p = iso.replace('/', '-').split('-')
+        return "%d de %s de %s" % (int(p[2]), MESES[int(p[1]) - 1], p[0])
+    except Exception:
+        return iso
+
 
 # ── Íconos propios ──────────────────────────────────────────────────────
 _ICONS_DIR = os.path.join(_BASE, 'icons')
@@ -78,38 +90,33 @@ def _segments(text):
 
 
 # ── Datos ───────────────────────────────────────────────────────────────
-_INTERP = None
-_PREAMBLE = None
-_GLOSSARY = None
+_CACHE = {}
 
 
 def _load_json(fname):
-    try:
-        with open(os.path.join(_BASE, fname), encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
-        return {}
+    if fname not in _CACHE:
+        try:
+            with open(os.path.join(_BASE, fname), encoding='utf-8') as f:
+                _CACHE[fname] = json.load(f)
+        except Exception:
+            _CACHE[fname] = {}
+    return _CACHE[fname]
 
 
 def _interp():
-    global _INTERP
-    if _INTERP is None:
-        _INTERP = _load_json('interpretations_es.json')
-    return _INTERP
+    return _load_json('interpretations_es.json')
 
 
 def _preamble():
-    global _PREAMBLE
-    if _PREAMBLE is None:
-        _PREAMBLE = _load_json('preamble_es.json')
-    return _PREAMBLE
+    return _load_json('preamble_es.json')
 
 
 def _glossary():
-    global _GLOSSARY
-    if _GLOSSARY is None:
-        _GLOSSARY = _load_json('glossary_es.json')
-    return _GLOSSARY
+    return _load_json('glossary_es.json')
+
+
+def _brand():
+    return _load_json('brand_es.json')
 
 
 _REGENTE = {"Aries": "Marte", "Taurus": "Venus", "Gemini": "Mercurio",
@@ -206,7 +213,6 @@ def build_preamble(chart):
     b = []
     b.append(("h2", pre.get('intro_titulo', 'Qué es una carta astral natal')))
     for p in pre.get('intro', []):
-        # Parametrización con los datos reales de la carta
         if p.startswith('1.'):
             p += " En tu caso, tu Sol está en %s, en la Casa %s." % (sun_sign, sun_roman)
         elif p.startswith('2.'):
@@ -343,8 +349,9 @@ def _png_from_dataurl(chart_png):
 #  PDF
 # ════════════════════════════════════════════════════════════════════════
 
-def render_pdf(title, sections, chart_png_bytes, user_line,
+def render_pdf(sections, chart_png_bytes, meta,
                pre_blocks=None, legend=None, glossary=None):
+    """meta: dict(name, city, astrologer, date, time)"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import cm
@@ -353,12 +360,19 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
     from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame,
                                     NextPageTemplate, Paragraph, Spacer,
                                     PageBreak, Image, Table, TableStyle)
+    from reportlab.platypus.tableofcontents import TableOfContents
 
     buf = io.BytesIO()
     page_w, page_h = A4
     lm = rm = 2.6 * cm
     tm = bm = 2.4 * cm
     bf, bd, it = 'Helvetica', 'Helvetica-Bold', 'Helvetica-Oblique'
+    # Serif elegante para la portada (siempre disponible en PDF)
+    sf, sb, si = 'Times-Roman', 'Times-Bold', 'Times-Italic'
+
+    person = meta.get('name') or ''
+    astrologer = meta.get('astrologer') or _brand().get('astrologo_default', '')
+    hoy = fecha_es(_date.today().isoformat())
 
     def esc(t):
         return t.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
@@ -372,13 +386,10 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
                              % (icon, size, size))
         return ''.join(parts)
 
-    st_title = ParagraphStyle('t', fontName=bd, fontSize=28, leading=34,
-                              textColor=C.HexColor(GOLD), alignment=TA_CENTER)
-    st_sub = ParagraphStyle('s', fontName=it, fontSize=13, leading=18,
-                            textColor=C.HexColor(SLATE), alignment=TA_CENTER)
+    # Estilos (capítulos centrados)
     st_h2 = ParagraphStyle('h2', fontName=bd, fontSize=16, leading=21,
-                           textColor=C.HexColor(NAVY), spaceBefore=18, spaceAfter=8,
-                           keepWithNext=1)
+                           textColor=C.HexColor(NAVY), spaceBefore=18, spaceAfter=10,
+                           keepWithNext=1, alignment=TA_CENTER)
     st_h3 = ParagraphStyle('h3', fontName=bd, fontSize=12, leading=15,
                            textColor=C.HexColor(BLUE), spaceBefore=10, spaceAfter=6,
                            keepWithNext=1)
@@ -387,10 +398,6 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
                              spaceAfter=5, firstLineIndent=14)
     st_item = ParagraphStyle('li', fontName=bf, fontSize=10.3, leading=16,
                              textColor=C.HexColor(INK), leftIndent=14)
-    st_tocc = ParagraphStyle('tc', fontName=bd, fontSize=11.5, leading=19,
-                             textColor=C.HexColor(NAVY))
-    st_tocs = ParagraphStyle('ts', fontName=bf, fontSize=9.5, leading=15,
-                             textColor=C.HexColor(BLUE), leftIndent=20)
 
     def on_cover(cv, doc):
         cv.saveState()
@@ -401,7 +408,8 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
         cv.rect(36, 36, page_w - 72, page_h - 72, fill=0, stroke=1)
         cv.setLineWidth(0.4)
         cv.rect(44, 44, page_w - 88, page_h - 88, fill=0, stroke=1)
-        cx, cy, r = page_w / 2, page_h * 0.70, 9
+        # ornamento
+        cx, cy, r = page_w / 2, page_h * 0.76, 9
         p = cv.beginPath()
         p.moveTo(cx, cy + r); p.lineTo(cx + r, cy); p.lineTo(cx, cy - r)
         p.lineTo(cx - r, cy); p.close()
@@ -411,12 +419,20 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
         cv.setLineWidth(0.5)
         cv.line(cx - 110, cy, cx - r - 12, cy)
         cv.line(cx + r + 12, cy, cx + 110, cy)
+        # astrólogo y fecha de generación
+        if astrologer:
+            cv.setFont(si, 11.5)
+            cv.setFillColor(C.HexColor(LIGHT))
+            cv.drawCentredString(page_w / 2, 118, 'Astrólogo: %s' % astrologer)
+        cv.setFont(sf, 9.5)
+        cv.setFillColor(C.HexColor(SLATE))
+        cv.drawCentredString(page_w / 2, 100, hoy)
         cv.setFont(bf, 9)
         cv.setFillColor(C.HexColor(GOLD))
         cv.drawCentredString(page_w / 2, 58, 'R E P O R T E   A S T R A L')
         cv.restoreState()
 
-    def _diamond(cv, cx, cy, r, C):
+    def _diamond(cv, cx, cy, r):
         p = cv.beginPath()
         p.moveTo(cx, cy + r); p.lineTo(cx + r, cy); p.lineTo(cx, cy - r)
         p.lineTo(cx - r, cy); p.close()
@@ -425,56 +441,61 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
     def on_body(cv, doc):
         cv.saveState()
         cv.setFillColor(C.HexColor(PAPER_BG)); cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
-        # ornamento superior: filete — rombo — filete
         ty = page_h - tm * 0.52
         cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.6)
         cv.line(page_w / 2 - 90, ty, page_w / 2 - 14, ty)
         cv.line(page_w / 2 + 14, ty, page_w / 2 + 90, ty)
         cv.setLineWidth(0.7)
-        _diamond(cv, page_w / 2, ty, 4.5, C)
+        _diamond(cv, page_w / 2, ty, 4.5)
         cv.setFillColor(C.HexColor(GOLD))
         cv.circle(page_w / 2, ty, 1.0, fill=1, stroke=0)
-        # pie de página
         cv.setLineWidth(0.7)
         cv.line(lm, bm * 0.72, page_w - rm, bm * 0.72)
         cv.setFont(bf, 7.5); cv.setFillColor(C.HexColor(NAVY))
         marca = 'REPORTE ASTRAL'
         cv.drawString(lm, bm * 0.42, marca)
         cv.setFont(it, 7.5); cv.setFillColor(C.HexColor(SLATE))
-        sub = '  ·  Carta Natal' + (('  ·  ' + user_line) if user_line else '')
+        sub = '  ·  Carta Natal' + (('  ·  ' + person) if person else '')
         cv.drawString(lm + cv.stringWidth(marca, bf, 7.5), bm * 0.42, sub)
         num = str(doc.page)
         cx2 = page_w - rm - 8
         cy2 = bm * 0.46
         cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.7)
-        _diamond(cv, cx2, cy2, 8.5, C)
+        _diamond(cv, cx2, cy2, 8.5)
         cv.setFont(bf, 7.5); cv.setFillColor(C.HexColor(NAVY))
         cv.drawCentredString(cx2, cy2 - 2.6, num)
         cv.restoreState()
 
+    class _Doc(BaseDocTemplate):
+        def afterFlowable(self, f):
+            key = getattr(f, '_tocKey', None)
+            if key:
+                lvl = 0 if f.style.name == 'h2' else 1
+                self.notify('TOCEntry', (lvl, f.getPlainText(), self.page, key))
+
     frame = Frame(lm, bm, page_w - lm - rm, page_h - tm - bm)
-    doc = BaseDocTemplate(buf, pagesize=A4, leftMargin=lm, rightMargin=rm,
-                          topMargin=tm, bottomMargin=bm)
+    doc = _Doc(buf, pagesize=A4, leftMargin=lm, rightMargin=rm,
+               topMargin=tm, bottomMargin=bm)
     doc.addPageTemplates([
         PageTemplate(id='Cover', frames=[Frame(lm, bm, page_w - lm - rm, page_h - tm - bm)], onPage=on_cover),
         PageTemplate(id='Body', frames=[frame], onPage=on_body),
     ])
 
-    # ── Contenido con anclas para el índice ──────────────────────────────
-    toc = []          # (nivel, texto, clave)
+    nkey = [0]
     content = []
 
     def H2(text):
-        key = "sec%d" % len(toc)
-        toc.append((1, text, key))
-        content.append(Paragraph('<a name="%s"/>' % key + with_icons(text, 10), st_h2))
+        key = "sec%d" % nkey[0]; nkey[0] += 1
+        p = Paragraph('<a name="%s"/>' % key + with_icons(text, 10), st_h2)
+        p._tocKey = key
+        content.append(p)
 
     def H3(text):
-        key = "sec%d" % len(toc)
-        toc.append((2, text, key))
-        content.append(Paragraph('<a name="%s"/>' % key + with_icons(text, 9), st_h3))
+        key = "sec%d" % nkey[0]; nkey[0] += 1
+        p = Paragraph('<a name="%s"/>' % key + with_icons(text, 9), st_h3)
+        p._tocKey = key
+        content.append(p)
 
-    # 1) Preámbulo
     if pre_blocks:
         for blk in pre_blocks:
             if blk[0] == "h2":
@@ -491,7 +512,6 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
                 content.append(Paragraph(nm_markup + ' — ' + esc(tx), st_item))
         content.append(PageBreak())
 
-    # 2) La carta + leyenda
     if chart_png_bytes:
         try:
             from PIL import Image as PILImage
@@ -532,7 +552,6 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
             content.append(t)
         content.append(PageBreak())
 
-    # 3-5) Secciones interpretativas
     for sec_title, items in sections:
         H2(sec_title)
         for it_title, paras in items:
@@ -540,7 +559,6 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
             for p in paras:
                 content.append(Paragraph(with_icons(p, 8), st_body))
 
-    # 6) Glosario
     if glossary:
         content.append(PageBreak())
         for blk in glossary:
@@ -555,23 +573,68 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
                 content.append(Paragraph('<b>%s</b> — %s' % (with_icons(nm, 8), esc(tx)),
                                          st_item))
 
-    # ── Índice ───────────────────────────────────────────────────────────
-    toc_flow = [Paragraph('Índice de contenidos', st_h2)]
-    for lvl, text, key in toc:
-        style = st_tocc if lvl == 1 else st_tocs
-        toc_flow.append(Paragraph(
-            '<a href="#%s" color="%s">%s</a>' % (key, NAVY if lvl == 1 else BLUE, esc(text)),
-            style))
-    toc_flow.append(PageBreak())
+    # ── Redes sociales del astrólogo ─────────────────────────────────────
+    brand = _brand()
+    redes = brand.get('redes', [])
+    if redes:
+        content.append(PageBreak())
+        H2(brand.get('redes_titulo', 'Encuéntrame en'))
+        st_red = ParagraphStyle('rd', fontName=bf, fontSize=11, leading=22,
+                                textColor=C.HexColor(INK), alignment=TA_CENTER)
+        if astrologer:
+            content.append(Paragraph('<font name="%s" size="13" color="%s"><i>%s</i></font>'
+                                     % (si, BLUE, esc(astrologer)), ParagraphStyle(
+                                         'rda', alignment=TA_CENTER, spaceAfter=12,
+                                         fontName=si, fontSize=13,
+                                         textColor=C.HexColor(BLUE))))
+        for r in redes:
+            content.append(Paragraph(
+                '<b>%s</b> — <a href="%s" color="%s"><u>%s</u></a>'
+                % (esc(r.get('nombre', '')), r.get('url', '#'), BLUE,
+                   esc(r.get('texto', r.get('url', '')))), st_red))
 
-    flow = [NextPageTemplate('Body'), Spacer(1, page_h * 0.30),
-            Paragraph(esc(title), st_title), Spacer(1, 14)]
-    if user_line:
-        flow.append(Paragraph(esc(user_line), st_sub))
+    # ── Índice con números de página ─────────────────────────────────────
+    toc = TableOfContents()
+    toc.levelStyles = [
+        ParagraphStyle('tocc', fontName=bd, fontSize=11.5, leading=18,
+                       textColor=C.HexColor(NAVY)),
+        ParagraphStyle('tocs', fontName=bf, fontSize=9.5, leading=14.5,
+                       textColor=C.HexColor(BLUE), leftIndent=20),
+    ]
+    toc.dotsMinLevel = 0
+
+    # ── Portada (serif elegante) ─────────────────────────────────────────
+    st_cv1 = ParagraphStyle('cv1', fontName=sb, fontSize=30, leading=36,
+                            textColor=C.HexColor(GOLD), alignment=TA_CENTER)
+    st_cv2 = ParagraphStyle('cv2', fontName=si, fontSize=17, leading=22,
+                            textColor=C.HexColor(SLATE), alignment=TA_CENTER)
+    st_cv3 = ParagraphStyle('cv3', fontName=sb, fontSize=19, leading=25,
+                            textColor=C.HexColor(LIGHT), alignment=TA_CENTER)
+    st_cv4 = ParagraphStyle('cv4', fontName=sf, fontSize=12.5, leading=19,
+                            textColor=C.HexColor(SLATE), alignment=TA_CENTER)
+
+    flow = [NextPageTemplate('Body'), Spacer(1, page_h * 0.24),
+            Paragraph('Reporte Astrológico', st_cv1),
+            Spacer(1, 4),
+            Paragraph('de Carta Natal', st_cv2),
+            Spacer(1, 34)]
+    if person:
+        flow.append(Paragraph(esc(person), st_cv3))
+        flow.append(Spacer(1, 10))
+    linea_fecha = meta.get('time', '')
+    if linea_fecha:
+        linea_fecha += '  —  '
+    linea_fecha += fecha_es(meta.get('date', ''))
+    flow.append(Paragraph(esc(linea_fecha), st_cv4))
+    if meta.get('city'):
+        flow.append(Paragraph(esc(meta['city']), st_cv4))
     flow.append(PageBreak())
-    flow += toc_flow
+
+    flow.append(Paragraph('Índice de contenidos', st_h2))
+    flow.append(toc)
+    flow.append(PageBreak())
     flow += content
-    doc.build(flow)
+    doc.multiBuild(flow)
     return buf.getvalue()
 
 
@@ -579,7 +642,7 @@ def render_pdf(title, sections, chart_png_bytes, user_line,
 #  DOCX
 # ════════════════════════════════════════════════════════════════════════
 
-def render_docx(title, sections, chart_png_bytes, user_line,
+def render_docx(sections, chart_png_bytes, meta,
                 pre_blocks=None, legend=None, glossary=None):
     from docx import Document
     from docx.shared import Pt, RGBColor, Inches
@@ -592,6 +655,11 @@ def render_docx(title, sections, chart_png_bytes, user_line,
     RED_RGB = RGBColor(0xB0, 0x20, 0x20)
     INK_RGB = RGBColor(0x22, 0x28, 0x4A)
     SLATE_RGB = RGBColor(0x8A, 0x93, 0xB5)
+    GOLD_RGB = RGBColor(0xC9, 0xA2, 0x4B)
+
+    person = meta.get('name') or ''
+    astrologer = meta.get('astrologer') or _brand().get('astrologo_default', '')
+    hoy = fecha_es(_date.today().isoformat())
 
     def add_text_with_icons(par, text, bold=False, size=None, color=None):
         for seg, icon in _segments(text):
@@ -609,157 +677,158 @@ def render_docx(title, sections, chart_png_bytes, user_line,
                 except Exception:
                     pass
 
-    def bookmark(par, name, bid):
-        s = OxmlElement('w:bookmarkStart')
-        s.set(qn('w:id'), str(bid)); s.set(qn('w:name'), name)
-        e = OxmlElement('w:bookmarkEnd')
-        e.set(qn('w:id'), str(bid))
-        par._p.insert(0, s); par._p.append(e)
-
-    def toc_link(par, anchor, text, color='1E2450', bold=False, italic=False):
+    def ext_link(par, url, text, color='3A4488'):
+        part = par.part
+        r_id = part.relate_to(url,
+            'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink',
+            is_external=True)
         h = OxmlElement('w:hyperlink')
-        h.set(qn('w:anchor'), anchor)
+        h.set(qn('r:id'), r_id)
         r = OxmlElement('w:r')
         rPr = OxmlElement('w:rPr')
         c = OxmlElement('w:color'); c.set(qn('w:val'), color); rPr.append(c)
-        if bold:
-            rPr.append(OxmlElement('w:b'))
+        u = OxmlElement('w:u'); u.set(qn('w:val'), 'single'); rPr.append(u)
         r.append(rPr)
         t = OxmlElement('w:t'); t.text = text
         r.append(t); h.append(r); par._p.append(h)
+
+    def toc_field(par):
+        """Campo TOC de Word: muestra títulos con números de página
+        (clic derecho → Actualizar campos)."""
+        fld = OxmlElement('w:fldSimple')
+        fld.set(qn('w:instr'), 'TOC \\o "1-2" \\h \\z \\u')
+        r = OxmlElement('w:r')
+        t = OxmlElement('w:t')
+        t.text = "Índice — haz clic derecho y elige «Actualizar campos» para ver las páginas."
+        r.append(t); fld.append(r)
+        par._p.append(fld)
 
     doc = Document()
     for s in doc.sections:
         s.top_margin = Inches(1); s.bottom_margin = Inches(1)
         s.left_margin = Inches(1); s.right_margin = Inches(1)
 
-    # Portada simple
-    h = doc.add_paragraph(); h.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = h.add_run(title); r.bold = True; r.font.size = Pt(26)
-    r.font.color.rgb = BLUE_RGB
-    if user_line:
-        sp = doc.add_paragraph(); sp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        rr = sp.add_run(user_line); rr.italic = True; rr.font.size = Pt(12)
-        rr.font.color.rgb = SLATE_RGB
-    mk = doc.add_paragraph(); mk.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    mr = mk.add_run('R E P O R T E   A S T R A L'); mr.font.size = Pt(9)
-    mr.font.color.rgb = RGBColor(0xC9, 0xA2, 0x4B)
+    def cover_line(text, size, color, bold=False, italic=False, font='Georgia',
+                   space_after=6):
+        p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_after = Pt(space_after)
+        r = p.add_run(text)
+        r.bold = bold; r.italic = italic
+        r.font.size = Pt(size); r.font.color.rgb = color; r.font.name = font
+        return p
+
+    # Portada
+    for _ in range(4):
+        doc.add_paragraph()
+    cover_line('Reporte Astrológico', 28, GOLD_RGB, bold=True)
+    cover_line('de Carta Natal', 15, SLATE_RGB, italic=True, space_after=22)
+    if person:
+        cover_line(person, 17, NAVY_RGB, bold=True, space_after=10)
+    linea = (meta.get('time', '') + '  —  ' if meta.get('time') else '') + fecha_es(meta.get('date', ''))
+    cover_line(linea, 12, INK_RGB)
+    if meta.get('city'):
+        cover_line(meta['city'], 12, INK_RGB, space_after=26)
+    if astrologer:
+        cover_line('Astrólogo: %s' % astrologer, 11.5, BLUE_RGB, italic=True)
+    cover_line(hoy, 9.5, SLATE_RGB)
+    cover_line('R E P O R T E   A S T R A L', 9, GOLD_RGB, space_after=0)
     doc.add_page_break()
 
-    # ── Contenido (recolectando anclas) ──────────────────────────────────
-    toc = []      # (nivel, texto, ancla)
-    bodyq = []    # cola de operaciones: se materializa tras armar el índice
+    # Índice (campo de Word con números de página)
+    hp = doc.add_heading(level=1)
+    hp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    hr = hp.add_run("Índice de contenidos"); hr.font.color.rgb = NAVY_RGB
+    toc_field(doc.add_paragraph())
+    doc.add_page_break()
 
-    def q_h2(text):
-        toc.append((1, text, "sec%d" % len(toc)))
-        bodyq.append(("h2", text, toc[-1][2]))
+    def H2(text):
+        hp = doc.add_heading(level=1)
+        hp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        add_text_with_icons(hp, text, color=NAVY_RGB)
 
-    def q_h3(text):
-        toc.append((2, text, "sec%d" % len(toc)))
-        bodyq.append(("h3", text, toc[-1][2]))
+    def H3(text):
+        hp = doc.add_heading(level=2)
+        add_text_with_icons(hp, text, color=BLUE_RGB)
 
-    def q(other, *args):
-        bodyq.append((other,) + args)
+    def body_p(text):
+        bp = doc.add_paragraph()
+        bp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        bp.paragraph_format.first_line_indent = Inches(0.18)
+        add_text_with_icons(bp, text)
+
+    def item_p(nm, tx, hl=False):
+        ip = doc.add_paragraph()
+        ip.paragraph_format.left_indent = Inches(0.2)
+        add_text_with_icons(ip, nm, bold=True, color=RED_RGB if hl else INK_RGB)
+        ip.add_run(" — " + tx)
 
     if pre_blocks:
         for blk in pre_blocks:
             if blk[0] == "h2":
-                q_h2(blk[1])
+                H2(blk[1])
             elif blk[0] == "h3":
-                q_h3(blk[1])
+                H3(blk[1])
             elif blk[0] == "p":
-                q("p", blk[1])
+                body_p(blk[1])
             elif blk[0] == "item":
-                q("item", blk[1], blk[2], blk[3])
+                item_p(blk[1], blk[2], blk[3])
+
     if chart_png_bytes:
-        q_h2("Carta natal: el libreto de tu vida")
-        q("img", chart_png_bytes)
+        H2("Carta natal: el libreto de tu vida")
+        pic = doc.add_paragraph(); pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        try:
+            pic.add_run().add_picture(io.BytesIO(chart_png_bytes), width=Inches(5.6))
+        except Exception:
+            pass
+
     if legend:
-        q_h3("Leyenda de símbolos")
-        q("legend", legend)
+        H3("Leyenda de símbolos")
+        for gname, rows in legend:
+            gp = doc.add_paragraph()
+            gr = gp.add_run(gname); gr.bold = True
+            gr.font.color.rgb = BLUE_RGB
+            ncols = 4
+            nrows = (len(rows) + ncols - 1) // ncols
+            tbl = doc.add_table(rows=nrows, cols=ncols)
+            for i, (icon, label) in enumerate(rows):
+                cell = tbl.cell(i // ncols, i % ncols)
+                cp = cell.paragraphs[0]
+                try:
+                    cp.add_run().add_picture(icon, height=Inches(0.14))
+                except Exception:
+                    pass
+                cp.add_run("  " + label).font.size = Pt(9.5)
+
     for sec_title, items in sections:
-        q_h2(sec_title)
+        H2(sec_title)
         for it_title, paras in items:
-            q_h3(it_title)
+            H3(it_title)
             for p in paras:
-                q("p", p)
+                body_p(p)
+
     if glossary:
         for blk in glossary:
             if blk[0] == "h2":
-                q_h2(blk[1])
+                H2(blk[1])
             elif blk[0] == "h3":
-                q_h3(blk[1])
+                H3(blk[1])
             elif blk[0] == "p":
-                q("p", blk[1])
+                body_p(blk[1])
             elif blk[0] == "item":
-                q("gitem", blk[1], blk[2])
+                item_p(blk[1], blk[2], False)
 
-    # ── Índice ───────────────────────────────────────────────────────────
-    hp = doc.add_heading(level=1)
-    hr = hp.add_run("Índice de contenidos"); hr.font.color.rgb = NAVY_RGB
-    for lvl, text, anchor in toc:
-        p = doc.add_paragraph()
-        if lvl == 2:
-            p.paragraph_format.left_indent = Inches(0.3)
-        toc_link(p, anchor, text, color='1E2450' if lvl == 1 else '3A4488',
-                 bold=(lvl == 1))
-    doc.add_page_break()
-
-    # ── Materializar el contenido ────────────────────────────────────────
-    bid = [100]
-    for op in bodyq:
-        kind = op[0]
-        if kind == "h2":
-            hp = doc.add_heading(level=1)
-            add_text_with_icons(hp, op[1], color=NAVY_RGB)
-            bookmark(hp, op[2], bid[0]); bid[0] += 1
-        elif kind == "h3":
-            sp = doc.add_paragraph()
-            sp.paragraph_format.space_before = Pt(8)
-            sp.paragraph_format.space_after = Pt(4)
-            add_text_with_icons(sp, op[1], bold=True, size=Pt(12), color=BLUE_RGB)
-            bookmark(sp, op[2], bid[0]); bid[0] += 1
-        elif kind == "p":
-            bp = doc.add_paragraph()
-            bp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            bp.paragraph_format.first_line_indent = Inches(0.18)
-            add_text_with_icons(bp, op[1])
-        elif kind == "item":
-            _, nm, tx, hl = op
-            ip = doc.add_paragraph()
-            ip.paragraph_format.left_indent = Inches(0.2)
-            add_text_with_icons(ip, nm, bold=True,
-                                color=RED_RGB if hl else INK_RGB)
-            ip.add_run(" — " + tx)
-        elif kind == "gitem":
-            _, nm, tx = op
-            ip = doc.add_paragraph()
-            ip.paragraph_format.left_indent = Inches(0.2)
-            add_text_with_icons(ip, nm, bold=True, color=INK_RGB)
-            ip.add_run(" — " + tx)
-        elif kind == "img":
-            doc.add_paragraph()
-            pic = doc.add_paragraph(); pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            try:
-                pic.add_run().add_picture(io.BytesIO(op[1]), width=Inches(5.6))
-            except Exception:
-                pass
-        elif kind == "legend":
-            for gname, rows in op[1]:
-                gp = doc.add_paragraph()
-                gr = gp.add_run(gname); gr.bold = True
-                gr.font.color.rgb = BLUE_RGB
-                ncols = 4
-                nrows = (len(rows) + ncols - 1) // ncols
-                tbl = doc.add_table(rows=nrows, cols=ncols)
-                for i, (icon, label) in enumerate(rows):
-                    cell = tbl.cell(i // ncols, i % ncols)
-                    cp = cell.paragraphs[0]
-                    try:
-                        cp.add_run().add_picture(icon, height=Inches(0.14))
-                    except Exception:
-                        pass
-                    cp.add_run("  " + label).font.size = Pt(9.5)
+    brand = _brand()
+    redes = brand.get('redes', [])
+    if redes:
+        doc.add_page_break()
+        H2(brand.get('redes_titulo', 'Encuéntrame en'))
+        if astrologer:
+            cover_line(astrologer, 13, BLUE_RGB, italic=True)
+        for r in redes:
+            p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            rr = p.add_run(r.get('nombre', '') + ' — '); rr.bold = True
+            rr.font.color.rgb = INK_RGB
+            ext_link(p, r.get('url', '#'), r.get('texto', r.get('url', '')))
 
     buf = io.BytesIO(); doc.save(buf); return buf.getvalue()
 
@@ -768,22 +837,27 @@ def render_docx(title, sections, chart_png_bytes, user_line,
 #  ORQUESTACIÓN
 # ════════════════════════════════════════════════════════════════════════
 
-def generate(chart, name, fmt, chart_png):
+def generate(chart, name, fmt, chart_png, city="", astrologer=""):
     """Punto de entrada. Devuelve (bytes, filename, mimetype)."""
     _intro, sections = build_sections(chart)
     pre_blocks = build_preamble(chart)
     legend = build_legend()
     glossary = build_glossary()
-    title = "Carta Natal"
     person = (name or '').strip()
-    user_line = person if person else None
+    meta = {
+        'name': person,
+        'city': (city or '').strip(),
+        'astrologer': (astrologer or '').strip(),
+        'date': chart.get('input', {}).get('date', ''),
+        'time': chart.get('input', {}).get('time', ''),
+    }
     png = _png_from_dataurl(chart_png)
     safe = "Reporte_Astral" + (("_" + person.replace(' ', '_')) if person else "")
     if fmt == 'docx':
-        data = render_docx(title, sections, png, user_line,
+        data = render_docx(sections, png, meta,
                            pre_blocks=pre_blocks, legend=legend, glossary=glossary)
         return data, safe + '.docx', \
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    data = render_pdf(title, sections, png, user_line,
+    data = render_pdf(sections, png, meta,
                       pre_blocks=pre_blocks, legend=legend, glossary=glossary)
     return data, safe + '.pdf', 'application/pdf'

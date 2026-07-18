@@ -61,6 +61,8 @@ class ReportRequest(BirthData):
     name: str = Field("", description="Nombre de la persona (opcional)")
     format: str = Field("pdf", description="pdf | docx")
     chart_png: Optional[str] = Field(None, description="Imagen de la rueda (data URL base64)")
+    city: str = Field("", description="Ciudad y país de nacimiento (texto libre)")
+    astrologer: str = Field("", description="Nombre del astrólogo (opcional)")
 
 
 # ── Rutas ───────────────────────────────────────────────────────────────
@@ -111,7 +113,9 @@ def make_report(req: ReportRequest):
         chart = astro.compute_chart(req.date, req.time, req.lat, req.lon,
                                     req.tz, req.hsys)
         fmt = (req.format or "pdf").lower()
-        data, filename, mime = report.generate(chart, req.name, fmt, req.chart_png)
+        data, filename, mime = report.generate(chart, req.name, fmt, req.chart_png,
+                                               city=req.city,
+                                               astrologer=req.astrologer)
         return Response(content=data, media_type=mime, headers={
             "Content-Disposition": 'attachment; filename="%s"' % filename})
     except Exception as e:

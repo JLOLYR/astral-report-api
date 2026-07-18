@@ -341,6 +341,19 @@ def compute_solar_return(natal, year, reloc=None):
     lon_ = (reloc or {}).get('lon', natal['lon'])
     sr = compute_chart(sr_date, sr_time, lat, lon_, '+00:00', natal.get('hsys', 'P'))
     sr['input']['label'] = 'Retorno solar %s (UT)' % year
+
+    # Momento exacto del retorno en hora local del lugar (relocalizado o natal).
+    from datetime import datetime as _dt, timedelta as _td
+    disp_tz = (reloc or {}).get('tz') or natal.get('tz') or '+00:00'
+    off = offset_hours(disp_tz, int(y), int(m), int(d), hh, mm)
+    ut_dt = _dt(int(y), int(m), int(d), hh, mm)
+    loc_dt = ut_dt + _td(hours=off)
+    sr['input']['return_ut'] = '%04d-%02d-%02d %02d:%02d' % (y, m, d, hh, mm)
+    sr['input']['return_local'] = loc_dt.strftime('%Y-%m-%d %H:%M')
+    sr['input']['return_tz'] = disp_tz
+    sr['input']['relocated'] = bool(reloc)
+    sr['input']['lat'] = float(lat)
+    sr['input']['lon'] = float(lon_)
     return {'natal': base, 'solar_return': sr, 'year': int(year)}
 
 

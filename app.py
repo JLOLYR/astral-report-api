@@ -56,6 +56,7 @@ class Reloc(BaseModel):
     lat: float
     lon: float
     tz: str = ""
+    city: str = ""
 
 
 class TransitRequest(BaseModel):
@@ -84,8 +85,11 @@ class ReportRequest(BaseModel):
         description="natal | transit | solar_return | progressed | combined")
     format: str = Field("pdf", description="pdf | docx")
     chart_png: Optional[str] = Field(None, description="Imagen de la rueda (data URL base64)")
+    chart_png2: Optional[str] = Field(None, description="Segunda rueda (retorno/progresada, data URL)")
     name: str = Field("", description="Nombre de la persona (opcional)")
+    name_b: str = Field("", description="Nombre de la segunda persona (carta combinada)")
     city: str = Field("", description="Ciudad y país de nacimiento (texto libre)")
+    city_b: str = Field("", description="Ciudad de la segunda persona (combinada)")
     astrologer: str = Field("", description="Nombre del astrólogo (opcional)")
     # Cargas útiles según el tipo (todas opcionales)
     natal: Optional[BirthData] = None
@@ -191,6 +195,7 @@ def make_report(req: ReportRequest):
             if req.reloc:
                 reloc = {"lat": req.reloc.lat, "lon": req.reloc.lon, "tz": req.reloc.tz}
             data = astro.compute_solar_return(_bd(req.natal), req.year, reloc)
+            data["reloc_city"] = (req.reloc.city if req.reloc else "") or req.city
         elif ct == "progressed":
             if not (req.natal and req.target_date):
                 raise ValueError("Faltan datos natales o la fecha objetivo.")
@@ -205,7 +210,8 @@ def make_report(req: ReportRequest):
         fmt = (req.format or "pdf").lower()
         out, filename, mime = report.generate(
             data, req.name, fmt, req.chart_png,
-            city=req.city, astrologer=req.astrologer, chart_type=ct)
+            city=req.city, astrologer=req.astrologer, chart_type=ct,
+            chart_png2=req.chart_png2, name_b=req.name_b, city_b=req.city_b)
         return Response(content=out, media_type=mime, headers={
             "Content-Disposition": 'attachment; filename="%s"' % filename})
     except Exception as e:

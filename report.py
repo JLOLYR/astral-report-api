@@ -378,7 +378,7 @@ def _png_from_dataurl(chart_png):
 # ════════════════════════════════════════════════════════════════════════
 
 def render_pdf(sections, chart_png_bytes, meta,
-               pre_blocks=None, legend=None, glossary=None):
+               pre_blocks=None, legend=None, glossary=None, chart_png2_bytes=None):
     """meta: dict(name, city, astrologer, date, time)"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
@@ -427,10 +427,32 @@ def render_pdf(sections, chart_png_bytes, meta,
     st_item = ParagraphStyle('li', fontName=bf, fontSize=10.3, leading=16,
                              textColor=C.HexColor(INK), leftIndent=14)
 
+    _WM_SIGNS = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra',
+                 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
+
+    def _watermark_signs(cv):
+        """Los 12 signos, sutiles y dorados, repartidos alrededor del margen."""
+        import math
+        cx, cy = page_w / 2, page_h / 2
+        rx, ry = (page_w - 96) / 2, (page_h - 96) / 2
+        sz = 24
+        for i, sg in enumerate(_WM_SIGNS):
+            fp = os.path.join(_ICONS_DIR, 'wm_' + sg + '.png')
+            if not os.path.exists(fp):
+                continue
+            ang = math.pi / 2 - i * (2 * math.pi / 12)  # arranca arriba, en sentido horario
+            x = cx + rx * math.cos(ang)
+            y = cy + ry * math.sin(ang)
+            try:
+                cv.drawImage(fp, x - sz / 2, y - sz / 2, width=sz, height=sz, mask='auto')
+            except Exception:
+                pass
+
     def on_cover(cv, doc):
         cv.saveState()
         cv.setFillColorRGB(0x0E / 255., 0x13 / 255., 0x32 / 255.)
         cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+        _watermark_signs(cv)
         cv.setStrokeColor(C.HexColor(GOLD))
         cv.setLineWidth(1.0)
         cv.rect(36, 36, page_w - 72, page_h - 72, fill=0, stroke=1)
@@ -483,7 +505,10 @@ def render_pdf(sections, chart_png_bytes, meta,
         marca = 'REPORTE ASTRAL'
         cv.drawString(lm, bm * 0.42, marca)
         cv.setFont(it, 7.5); cv.setFillColor(C.HexColor(SLATE))
-        sub = '  ·  Carta Natal' + (('  ·  ' + person) if person else '')
+        _tipo = meta.get('subtitle', 'de Carta Natal')
+        if _tipo.lower().startswith('de '):
+            _tipo = _tipo[3:]
+        sub = '  ·  ' + _tipo + (('  ·  ' + person) if person else '')
         cv.drawString(lm + cv.stringWidth(marca, bf, 7.5), bm * 0.42, sub)
         num = str(doc.page)
         cx2 = page_w - rm - 8
@@ -543,13 +568,31 @@ def render_pdf(sections, chart_png_bytes, meta,
     if chart_png_bytes:
         try:
             from PIL import Image as PILImage
-            im = PILImage.open(io.BytesIO(chart_png_bytes))
-            iw, ih = im.size
-            disp_w = min(page_w - lm - rm, 15 * cm)
-            disp_h = disp_w * ih / iw
-            H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
-            content.append(Spacer(1, 6))
-            content.append(Image(io.BytesIO(chart_png_bytes), width=disp_w, height=disp_h))
+            caps = meta.get('img_captions')
+            if chart_png2_bytes and caps:
+                # Dos ruedas grandes, cada una a su tamaño (mejor aprovechamiento)
+                H2(meta.get('chart_heading', 'Tus dos cartas'))
+                for img_bytes, cap in ((chart_png_bytes, caps[0]),
+                                       (chart_png2_bytes, caps[1])):
+                    im = PILImage.open(io.BytesIO(img_bytes))
+                    iw, ih = im.size
+                    disp_w = min(page_w - lm - rm, 15.5 * cm)
+                    disp_h = disp_w * ih / iw
+                    max_h = 20 * cm
+                    if disp_h > max_h:
+                        disp_h = max_h; disp_w = disp_h * iw / ih
+                    H3(cap)
+                    content.append(Spacer(1, 4))
+                    content.append(Image(io.BytesIO(img_bytes), width=disp_w, height=disp_h))
+                    content.append(Spacer(1, 10))
+            else:
+                im = PILImage.open(io.BytesIO(chart_png_bytes))
+                iw, ih = im.size
+                disp_w = min(page_w - lm - rm, 15 * cm)
+                disp_h = disp_w * ih / iw
+                H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
+                content.append(Spacer(1, 6))
+                content.append(Image(io.BytesIO(chart_png_bytes), width=disp_w, height=disp_h))
         except Exception:
             pass
 
@@ -659,6 +702,40 @@ def render_pdf(sections, chart_png_bytes, meta,
     flow.append(Paragraph(esc(linea_fecha), st_cv4))
     if meta.get('city'):
         flow.append(Paragraph(esc(meta['city']), st_cv4))
+
+    st_cv5 = ParagraphStyle('cv5', fontName=si, fontSize=11, leading=16,
+                            textColor=C.HexColor(GOLD), alignment=TA_CENTER)
+    st_cv6 = ParagraphStyle('cv6', fontName=sf, fontSize=11.5, leading=17,
+                            textColor=C.HexColor(SLATE), alignment=TA_CENTER)
+
+    # Retorno solar: lugar y momento exacto del retorno (no es la hora de nacimiento)
+    if meta.get('chart_type') == 'solar_return' and meta.get('return_moment'):
+        flow.append(Spacer(1, 16))
+        if meta.get('relocated') and meta.get('return_place'):
+            flow.append(Paragraph('Relocalizado en: ' + esc(meta['return_place']), st_cv5))
+        rmoment = esc(meta['return_moment'])
+        if meta.get('return_tz'):
+            rmoment += '  (' + esc(meta['return_tz']) + ')'
+        flow.append(Paragraph('El retorno solar exacto ocurre el', st_cv6))
+        flow.append(Paragraph(rmoment, st_cv5))
+        if meta.get('return_ut'):
+            flow.append(Paragraph(esc(meta['return_ut']) + ' UT', st_cv6))
+
+    # Combinada: segunda persona con sus datos
+    pb = meta.get('person_b')
+    if meta.get('chart_type') == 'combined' and pb:
+        flow.append(Spacer(1, 14))
+        flow.append(Paragraph('en vínculo con', st_cv6))
+        if pb.get('name'):
+            flow.append(Paragraph(esc(pb['name']), st_cv3))
+        lb = pb.get('time', '')
+        if lb:
+            lb += '  —  '
+        lb += fecha_es(pb.get('date', ''))
+        flow.append(Paragraph(esc(lb), st_cv4))
+        if pb.get('city'):
+            flow.append(Paragraph(esc(pb['city']), st_cv4))
+
     flow.append(PageBreak())
 
     flow.append(Paragraph('Índice de contenidos', st_h2))
@@ -674,7 +751,7 @@ def render_pdf(sections, chart_png_bytes, meta,
 # ════════════════════════════════════════════════════════════════════════
 
 def render_docx(sections, chart_png_bytes, meta,
-                pre_blocks=None, legend=None, glossary=None):
+                pre_blocks=None, legend=None, glossary=None, chart_png2_bytes=None):
     from docx import Document
     from docx.shared import Pt, RGBColor, Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -758,7 +835,29 @@ def render_docx(sections, chart_png_bytes, meta,
     linea = (meta.get('time', '') + '  —  ' if meta.get('time') else '') + fecha_es(meta.get('date', ''))
     cover_line(linea, 12, INK_RGB)
     if meta.get('city'):
-        cover_line(meta['city'], 12, INK_RGB, space_after=26)
+        cover_line(meta['city'], 12, INK_RGB, space_after=8)
+
+    # Retorno solar: lugar y momento exacto del retorno
+    if meta.get('chart_type') == 'solar_return' and meta.get('return_moment'):
+        if meta.get('relocated') and meta.get('return_place'):
+            cover_line('Relocalizado en: ' + meta['return_place'], 11, GOLD_RGB, italic=True)
+        rmoment = meta['return_moment'] + (('  (' + meta['return_tz'] + ')') if meta.get('return_tz') else '')
+        cover_line('El retorno solar exacto ocurre el', 10.5, SLATE_RGB)
+        cover_line(rmoment, 12, GOLD_RGB, bold=True)
+        if meta.get('return_ut'):
+            cover_line(meta['return_ut'] + ' UT', 10, SLATE_RGB, space_after=20)
+
+    # Combinada: segunda persona con sus datos
+    pb = meta.get('person_b')
+    if meta.get('chart_type') == 'combined' and pb:
+        cover_line('en vínculo con', 10.5, SLATE_RGB, italic=True)
+        if pb.get('name'):
+            cover_line(pb['name'], 15, NAVY_RGB, bold=True)
+        lb = (pb.get('time', '') + '  —  ' if pb.get('time') else '') + fecha_es(pb.get('date', ''))
+        cover_line(lb, 12, INK_RGB)
+        if pb.get('city'):
+            cover_line(pb['city'], 12, INK_RGB, space_after=20)
+
     if astrologer:
         cover_line('Astrólogo: %s' % astrologer, 11.5, BLUE_RGB, italic=True)
     cover_line(hoy, 9.5, SLATE_RGB)
@@ -805,12 +904,24 @@ def render_docx(sections, chart_png_bytes, meta,
                 item_p(blk[1], blk[2], blk[3])
 
     if chart_png_bytes:
-        H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
-        pic = doc.add_paragraph(); pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        try:
-            pic.add_run().add_picture(io.BytesIO(chart_png_bytes), width=Inches(5.6))
-        except Exception:
-            pass
+        caps = meta.get('img_captions')
+        if chart_png2_bytes and caps:
+            H2(meta.get('chart_heading', 'Tus dos cartas'))
+            for img_bytes, cap in ((chart_png_bytes, caps[0]),
+                                   (chart_png2_bytes, caps[1])):
+                H3(cap)
+                pic = doc.add_paragraph(); pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                try:
+                    pic.add_run().add_picture(io.BytesIO(img_bytes), width=Inches(6.2))
+                except Exception:
+                    pass
+        else:
+            H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
+            pic = doc.add_paragraph(); pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            try:
+                pic.add_run().add_picture(io.BytesIO(chart_png_bytes), width=Inches(5.6))
+            except Exception:
+                pass
 
     if legend:
         H3("Leyenda de símbolos")
@@ -895,7 +1006,8 @@ _INTRO_TITLE = {
 }
 
 
-def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="natal"):
+def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="natal",
+             chart_png2=None, name_b="", city_b=""):
     """Punto de entrada. Devuelve (bytes, filename, mimetype).
 
     `data` es el dict que devuelve astro para el tipo pedido:
@@ -956,15 +1068,45 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
         'time': base_meta.get('input', {}).get('time', ''),
         'subtitle': subtitle,
         'chart_heading': _CHART_HEADING.get(ct, 'Carta natal'),
+        'chart_type': ct,
     }
+
+    # Datos específicos por tipo para la portada
+    if ct == 'solar_return':
+        si = data.get('solar_return', {}).get('input', {})
+        rl = si.get('return_local', '')          # 'YYYY-MM-DD HH:MM'
+        if rl:
+            parts = rl.split(' ')
+            dp = parts[0]; tp = parts[1] if len(parts) > 1 else ''
+            meta['return_moment'] = fecha_es(dp) + ((', ' + tp) if tp else '')
+        else:
+            meta['return_moment'] = ''
+        meta['return_tz'] = si.get('return_tz', '')
+        meta['return_ut'] = si.get('return_ut', '')
+        meta['return_place'] = (data.get('reloc_city') or city or '').strip()
+        meta['relocated'] = si.get('relocated', False)
+        meta['img_captions'] = ['Carta natal', 'Retorno solar']
+    elif ct == 'progressed':
+        meta['img_captions'] = ['Carta natal', 'Carta progresada']
+    elif ct == 'combined':
+        bi = data.get('b', {}).get('input', {})
+        meta['person_b'] = {
+            'name': (name_b or '').strip(),
+            'date': bi.get('date', ''), 'time': bi.get('time', ''),
+            'city': (city_b or '').strip(),
+        }
+
     png = _png_from_dataurl(chart_png)
+    png2 = _png_from_dataurl(chart_png2)
     tsuf = '' if ct == 'natal' else ('_' + ct)
     safe = "Reporte_Astral" + (("_" + person.replace(' ', '_')) if person else "") + tsuf
     if fmt == 'docx':
         out = render_docx(sections, png, meta,
-                          pre_blocks=pre_blocks, legend=legend, glossary=glossary)
+                          pre_blocks=pre_blocks, legend=legend, glossary=glossary,
+                          chart_png2_bytes=png2)
         return out, safe + '.docx', \
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     out = render_pdf(sections, png, meta,
-                     pre_blocks=pre_blocks, legend=legend, glossary=glossary)
+                     pre_blocks=pre_blocks, legend=legend, glossary=glossary,
+                     chart_png2_bytes=png2)
     return out, safe + '.pdf', 'application/pdf'

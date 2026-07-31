@@ -781,8 +781,30 @@ def render_pdf(sections, chart_png_bytes, meta,
         return '   —   '.join(parts)
 
     def _draw_header(cv, wpage):
-        cv.setFont(bf, 8); cv.setFillColor(C.HexColor(NAVY))
-        cv.drawCentredString(wpage / 2, page_h - tm * 0.32, _header_line())
+        # Gris tenue (marca de agua); nombre, hora y fecha en cursiva
+        gray = C.HexColor('#AEB4C6')
+        left = 'REPORTE ASTRAL'
+        datos = []
+        if person:
+            datos.append(person)
+        dt = []
+        if meta.get('time'):
+            dt.append(meta['time'])
+        fa = fecha_ab(meta.get('date', ''))
+        if fa:
+            dt.append(fa)
+        if meta.get('city'):
+            dt.append(meta['city'])
+        if dt:
+            datos.append(', '.join(dt))
+        right = ('   —   ' + '   —   '.join(datos)) if datos else ''
+        w1 = cv.stringWidth(left, bf, 8)
+        w2 = cv.stringWidth(right, it, 8)
+        x0 = (wpage - (w1 + w2)) / 2.0
+        y = page_h - tm * 0.32
+        cv.setFillColor(gray)
+        cv.setFont(bf, 8); cv.drawString(x0, y, left)
+        cv.setFont(it, 8); cv.drawString(x0 + w1, y, right)
 
     def on_body(cv, doc):
         cv.saveState()
@@ -1118,6 +1140,24 @@ def render_pdf(sections, chart_png_bytes, meta,
                 ic_markup + '<b>%s</b> — <a href="%s" color="%s"><u>%s</u></a>'
                 % (esc(r.get('nombre', '')), r.get('url', '#'), BLUE,
                    esc(r.get('texto', r.get('url', '')))), st_red))
+
+        # ── Nuestra app: Diario Astral ───────────────────────────────────
+        _app = os.path.join(_COVERS_DIR, 'diario_astral.png')
+        content.append(Spacer(1, 26))
+        if os.path.exists(_app):
+            ap = Table([[Image(_app, width=1.7 * cm, height=1.7 * cm)]],
+                       colWidths=[page_w - lm - rm])
+            ap.setStyle(TableStyle([('ALIGN', (0, 0), (-1, -1), 'CENTER')]))
+            content.append(ap)
+        content.append(Paragraph(
+            '<b>Diario Astral</b>: tu brújula cósmica personal, en español.',
+            ParagraphStyle('appt', fontName=sb, fontSize=13, leading=17,
+                           textColor=C.HexColor(NAVY), alignment=TA_CENTER,
+                           spaceBefore=6, spaceAfter=3)))
+        content.append(Paragraph(
+            'Descárgala en App Store y Google Play.',
+            ParagraphStyle('apps', fontName=si, fontSize=11, leading=15,
+                           textColor=C.HexColor(SLATE), alignment=TA_CENTER)))
 
     # ── Índice con números de página ─────────────────────────────────────
     toc = TableOfContents()
@@ -1529,6 +1569,20 @@ def render_docx(sections, chart_png_bytes, meta,
             rr = p.add_run(r.get('nombre', '') + ' — '); rr.bold = True
             rr.font.color.rgb = INK_RGB
             ext_link(p, r.get('url', '#'), r.get('texto', r.get('url', '')))
+
+        # Nuestra app: Diario Astral
+        _app = os.path.join(_COVERS_DIR, 'diario_astral.png')
+        doc.add_paragraph()
+        if os.path.exists(_app):
+            ap = doc.add_paragraph(); ap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            try:
+                ap.add_run().add_picture(_app, height=Inches(0.7))
+            except Exception:
+                pass
+        cover_line('Diario Astral: tu brújula cósmica personal, en español.',
+                   13, NAVY_RGB, bold=True, space_after=2)
+        cover_line('Descárgala en App Store y Google Play.',
+                   11, SLATE_RGB, italic=True)
 
     buf = io.BytesIO(); doc.save(buf); return buf.getvalue()
 

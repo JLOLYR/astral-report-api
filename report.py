@@ -230,6 +230,52 @@ def build_decanates(chart):
                       dec * 10, dec * 10 + 10, reg_name))
         items.append((title, [txt]))
     return items
+
+
+def build_transit_intro(data):
+    """Explicación elaborada de los tránsitos: dónde va el Sol, la Luna y el
+    regente del signo solar (signo y casa natal) y qué aspecto le hacen a la
+    carta base. Devuelve una lista de párrafos."""
+    natal = data.get('natal', {})
+    trans = data.get('transit', {})
+    cross = data.get('cross_aspects', [])
+    tpl = {p['key']: p for p in trans.get('planets', [])}
+    npl = {p['key']: p for p in natal.get('planets', [])}
+    key_by_name = {v: k for k, v in _NAME_BY_KEY.items()}
+
+    def asp_txt(tk, nk):
+        for x in cross:
+            if x.get('transit') == tk and x.get('natal') == nk:
+                return ", formando %s con tu %s natal (orbe %.1f°)" % (
+                    x.get('type_es', 'aspecto').lower(),
+                    _NAME_BY_KEY.get(nk, nk), x.get('orb', 0))
+        return ""
+
+    def line(tk, label, nk):
+        p = tpl.get(tk)
+        if not p:
+            return ""
+        nh = p.get('natal_house', p.get('house', 1))
+        return "%s transita por %s, en tu Casa %s%s." % (
+            label, p.get('sign_es', ''), ROMAN[nh - 1], asp_txt(tk, nk))
+
+    paras = []
+    l = line('aSol', 'El Sol', 'aSol')
+    if l:
+        paras.append(l)
+    l = line('aLuna', 'La Luna', 'aLuna')
+    if l:
+        paras.append(l)
+    sun_sign_en = npl.get('aSol', {}).get('sign', 'Aries')
+    ruler_name = _REGENTE.get(sun_sign_en, 'Sol')
+    rk = key_by_name.get(ruler_name)
+    if rk and rk not in ('aSol', 'aLuna'):
+        l = line(rk, 'Tu regente %s' % ruler_name, rk)
+        if l:
+            paras.append(l)
+    return paras
+
+
 _CRUZ = {"Aries": "cardinal", "Cancer": "cardinal", "Libra": "cardinal",
          "Capricorn": "cardinal", "Taurus": "fija", "Leo": "fija",
          "Scorpio": "fija", "Aquarius": "fija", "Gemini": "mutable",
@@ -370,6 +416,16 @@ def build_preamble(chart, chart_type='natal'):
                         "definen la cruz y el elemento del vínculo, con sus "
                         "mandamientos. Aquí los tienes, adaptados a la relación que "
                         "ambas personas forman." % sun_sign))
+    elif chart_type == 'progressed':
+        b.append(("h2", "Tu carta progresada"))
+        b.append(("p", "La carta progresada describe tu evolución interna: cómo han "
+                        "madurado, paso a paso, las energías con las que naciste. En "
+                        "ella, tu Sol progresado está en %s, en la Casa %s; tu Luna "
+                        "progresada está en %s, en la Casa %s; y tu Ascendente "
+                        "progresado es %s. A partir de estos tres factores se leen la "
+                        "cruz y el elemento de esta etapa, con sus mandamientos, que "
+                        "encuentras a continuación."
+                  % (sun_sign, sun_roman, moon_sign, moon_roman, asc_sign)))
     else:
         b.append(("h2", pre.get('intro_titulo', 'Qué es una carta astral natal')))
         for p in pre.get('intro', []):
@@ -577,13 +633,14 @@ def render_pdf(sections, chart_png_bytes, meta,
     def esc(t):
         return t.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
-    def with_icons(t, size=8):
+    def with_icons(t, size=12):
         parts = []
+        va = -round(size * 0.22)
         for seg, icon in _segments(t):
             parts.append(esc(seg))
             if icon:
-                parts.append(' <img src="%s" width="%d" height="%d" valign="-1"/>'
-                             % (icon, size, size))
+                parts.append(' <img src="%s" width="%d" height="%d" valign="%d"/>'
+                             % (icon, size, size, va))
         return ''.join(parts)
 
     # Estilos (capítulos centrados)
@@ -771,13 +828,13 @@ def render_pdf(sections, chart_png_bytes, meta,
 
     def H2(text):
         key = "sec%d" % nkey[0]; nkey[0] += 1
-        p = Paragraph('<a name="%s"/>' % key + with_icons(text, 10), st_h2)
+        p = Paragraph('<a name="%s"/>' % key + with_icons(text, 15), st_h2)
         p._tocKey = key
         content.append(p)
 
     def H3(text):
         key = "sec%d" % nkey[0]; nkey[0] += 1
-        p = Paragraph('<a name="%s"/>' % key + with_icons(text, 9), st_h3)
+        p = Paragraph('<a name="%s"/>' % key + with_icons(text, 14), st_h3)
         p._tocKey = key
         content.append(p)
 
@@ -798,7 +855,7 @@ def render_pdf(sections, chart_png_bytes, meta,
             return
         data_rows = []
         for label, frase, hl in rows:
-            lp = Paragraph(with_icons(label, 9), st_mand_lR if hl else st_mand_l)
+            lp = Paragraph(with_icons(label, 13), st_mand_lR if hl else st_mand_l)
             rp = Paragraph(esc(frase), st_mand_rR if hl else st_mand_r)
             data_rows.append([lp, rp])
         col0 = 4.6 * cm
@@ -825,10 +882,10 @@ def render_pdf(sections, chart_png_bytes, meta,
             elif blk[0] == "h3":
                 H3(blk[1])
             elif blk[0] == "p":
-                content.append(Paragraph(with_icons(blk[1], 8), st_body))
+                content.append(Paragraph(with_icons(blk[1], 12), st_body))
             elif blk[0] == "item":
                 _, nm, tx, hl = blk
-                nm_markup = with_icons(nm, 8)
+                nm_markup = with_icons(nm, 12)
                 nm_markup = ('<font color="%s"><b>%s</b></font>' % (RED, nm_markup)) if hl \
                     else ('<b>%s</b>' % nm_markup)
                 content.append(Paragraph(nm_markup + ' — ' + esc(tx), st_item))
@@ -912,10 +969,10 @@ def render_pdf(sections, chart_png_bytes, meta,
             else:
                 im = PILImage.open(io.BytesIO(chart_png_bytes))
                 iw, ih = im.size
-                # Se reduce lo justo para que la leyenda entre en la MISMA página
-                disp_w = min(page_w - lm - rm, 13.2 * cm)
+                # Página dedicada (solo carta + leyenda): aprovechar el máximo
+                disp_w = page_w - lm - rm
                 disp_h = disp_w * ih / iw
-                max_h = 14.2 * cm
+                max_h = 17.2 * cm       # deja sitio para la leyenda debajo
                 if disp_h > max_h:
                     disp_h = max_h; disp_w = disp_h * iw / ih
                 H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
@@ -930,14 +987,14 @@ def render_pdf(sections, chart_png_bytes, meta,
 
     if legend and not legend_done[0]:
         add_legend(ncols=6, fs=8.5, ic_sz=9)
-        content.append(Spacer(1, 18))
+        content.append(PageBreak())   # la carta + leyenda quedan solas en su página
 
     for sec_title, items in sections:
         H2(sec_title)
         for it_title, paras in items:
             H3(it_title)
             for p in paras:
-                content.append(Paragraph(with_icons(p, 8), st_body))
+                content.append(Paragraph(with_icons(p, 12), st_body))
 
     if glossary:
         content.append(Spacer(1, 20))
@@ -947,10 +1004,10 @@ def render_pdf(sections, chart_png_bytes, meta,
             elif blk[0] == "h3":
                 H3(blk[1])
             elif blk[0] == "p":
-                content.append(Paragraph(with_icons(blk[1], 8), st_body))
+                content.append(Paragraph(with_icons(blk[1], 12), st_body))
             elif blk[0] == "item":
                 _, nm, tx, _hl = blk
-                content.append(Paragraph('<b>%s</b> — %s' % (with_icons(nm, 8), esc(tx)),
+                content.append(Paragraph('<b>%s</b> — %s' % (with_icons(nm, 12), esc(tx)),
                                          st_item))
 
     # ── Cierre / palabras finales ────────────────────────────────────────
@@ -1145,7 +1202,7 @@ def render_docx(sections, chart_png_bytes, meta,
             if icon:
                 try:
                     par.add_run(' ')
-                    par.add_run().add_picture(icon, height=Inches(0.12))
+                    par.add_run().add_picture(icon, height=Inches(0.17))
                 except Exception:
                     pass
 
@@ -1498,8 +1555,17 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
         base_meta = data
         _intro, sections = build_sections(chart, 'natal')
 
-    if ct in ("natal", "solar_return", "combined"):
+    if ct in ("natal", "solar_return", "combined", "progressed"):
+        # Progresada usa el mismo preámbulo que natal/retorno (Sol, Luna, Asc,
+        # cruz y elemento), adaptado.
         pre_blocks = build_preamble(chart, ct)
+    elif ct == "transit":
+        pre_blocks = [("h2", _INTRO_TITLE.get(ct, "Qué son los tránsitos"))]
+        if _intro:
+            pre_blocks.append(("p", _intro))
+        pre_blocks.append(("h3", "El clima astral de estos tránsitos"))
+        for para in build_transit_intro(data):
+            pre_blocks.append(("p", para))
     else:
         pre_blocks = []
         if _INTRO_TITLE.get(ct):

@@ -43,6 +43,8 @@ _NAME_BY_KEY = {
 }
 MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
          'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+MESES_AB = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep',
+            'Oct', 'Nov', 'Dic']
 
 
 def fecha_es(iso):
@@ -50,6 +52,15 @@ def fecha_es(iso):
     try:
         p = iso.replace('/', '-').split('-')
         return "%d de %s de %s" % (int(p[2]), MESES[int(p[1]) - 1], p[0])
+    except Exception:
+        return iso
+
+
+def fecha_ab(iso):
+    """'1988-09-28' → 'Sep 28. 1988'."""
+    try:
+        p = iso.replace('/', '-').split('-')
+        return "%s %d. %s" % (MESES_AB[int(p[1]) - 1], int(p[2]), p[0])
     except Exception:
         return iso
 
@@ -689,8 +700,12 @@ def render_pdf(sections, chart_png_bytes, meta,
         # Si hay portada de marca para este tipo, va a página completa
         if cover_img:
             try:
+                # Fondo oscuro + imagen a altura completa sin deformar (la
+                # portada es vertical 9:16; se centra con finas bandas laterales)
+                cv.setFillColor(C.HexColor('#0A0A16'))
+                cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
                 cv.drawImage(cover_img, 0, 0, width=page_w, height=page_h,
-                             preserveAspectRatio=False, mask=None)
+                             preserveAspectRatio=True, anchor='c', mask='auto')
                 return
             except Exception:
                 pass
@@ -748,10 +763,32 @@ def render_pdf(sections, chart_png_bytes, meta,
             parts.append(_web)
         return '   ·   ' + '   ·   '.join(parts)
 
+    def _header_line():
+        """Encabezado con los datos del consultante (todas las páginas)."""
+        parts = ['REPORTE ASTRAL']
+        if person:
+            parts.append(person)
+        dt = []
+        if meta.get('time'):
+            dt.append(meta['time'])
+        fa = fecha_ab(meta.get('date', ''))
+        if fa:
+            dt.append(fa)
+        if meta.get('city'):
+            dt.append(meta['city'])
+        if dt:
+            parts.append(', '.join(dt))
+        return '   —   '.join(parts)
+
+    def _draw_header(cv, wpage):
+        cv.setFont(bf, 8); cv.setFillColor(C.HexColor(NAVY))
+        cv.drawCentredString(wpage / 2, page_h - tm * 0.32, _header_line())
+
     def on_body(cv, doc):
         cv.saveState()
         cv.setFillColor(C.HexColor(PAPER_BG)); cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
-        ty = page_h - tm * 0.52
+        _draw_header(cv, page_w)
+        ty = page_h - tm * 0.62
         cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.6)
         cv.line(page_w / 2 - 90, ty, page_w / 2 - 14, ty)
         cv.line(page_w / 2 + 14, ty, page_w / 2 + 90, ty)
@@ -782,6 +819,8 @@ def render_pdf(sections, chart_png_bytes, meta,
     def on_wheels(cv, doc):
         cv.saveState()
         cv.setFillColor(C.HexColor(PAPER_BG)); cv.rect(0, 0, land_w, land_h, fill=1, stroke=0)
+        cv.setFont(bf, 8); cv.setFillColor(C.HexColor(NAVY))
+        cv.drawCentredString(land_w / 2, land_h - tm * 0.30, _header_line())
         cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.7)
         cv.line(lm, bm * 0.72, land_w - rm, bm * 0.72)
         cv.setFont(bf, 7.5); cv.setFillColor(C.HexColor(NAVY))
@@ -972,7 +1011,7 @@ def render_pdf(sections, chart_png_bytes, meta,
                 # Página dedicada (solo carta + leyenda): aprovechar el máximo
                 disp_w = page_w - lm - rm
                 disp_h = disp_w * ih / iw
-                max_h = 17.2 * cm       # deja sitio para la leyenda debajo
+                max_h = 16.4 * cm       # deja sitio seguro para la leyenda debajo
                 if disp_h > max_h:
                     disp_h = max_h; disp_w = disp_h * iw / ih
                 H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
@@ -1257,7 +1296,8 @@ def render_docx(sections, chart_png_bytes, meta,
         cp = doc.add_paragraph(); cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
         cp.paragraph_format.space_after = Pt(0)
         try:
-            cp.add_run().add_picture(cover_img, width=Inches(6.9))
+            # portada vertical: ajustar por altura para que quepa en la página
+            cp.add_run().add_picture(cover_img, height=Inches(9.2))
         except Exception:
             pass
         doc.add_page_break()

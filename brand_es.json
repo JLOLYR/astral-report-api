@@ -7,7 +7,7 @@
     {"nombre": "YouTube", "url": "https://www.youtube.com/user/CodigosTV", "texto": "youtube.com/user/CodigosTV", "icon": "youtube"},
     {"nombre": "Instagram", "url": "https://www.instagram.com/mauriciopuertaoficial/", "texto": "@mauriciopuertaoficial", "icon": "instagram"},
     {"nombre": "Facebook", "url": "https://www.facebook.com/mauriciopuerta.tv", "texto": "facebook.com/mauriciopuerta.tv", "icon": "facebook"},
-    {"nombre": "X (Twitter)", "url": "https://x.com/MauricioPuerta1", "texto": "@MauricioPuerta1", "icon": "x"},
+    {"nombre": "WhatsApp", "url": "https://wa.me/13053806062", "texto": "+1 (305) 380-6062", "icon": "whatsapp"},
     {"nombre": "TikTok", "url": "https://www.tiktok.com/@mauriciopuertaoficial", "texto": "@mauriciopuertaoficial", "icon": "tiktok"}
   ]
 }

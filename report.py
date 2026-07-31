@@ -57,6 +57,54 @@ def fecha_es(iso):
 # ── Íconos propios ──────────────────────────────────────────────────────
 _ICONS_DIR = os.path.join(_BASE, 'icons')
 
+# ── Portadas de marca y página de información (imágenes de página completa) ─
+_COVERS_DIR = os.path.join(_BASE, 'covers')
+_COVER_FILE = {'natal': 'natal.jpg', 'solar_return': 'solar_return.jpg',
+               'combined': 'combined.jpg'}
+
+
+def _cover_path(chart_type):
+    f = _COVER_FILE.get(chart_type)
+    if f:
+        p = os.path.join(_COVERS_DIR, f)
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _info_path():
+    p = os.path.join(_COVERS_DIR, 'info.jpg')
+    return p if os.path.exists(p) else None
+
+
+# Aviso legal y de privacidad (página penúltima del reporte)
+_DISCLAIMER = [
+    ("Tu privacidad",
+     "En https://www.mauriciopuerta.tv/ nos comprometemos a respetar tu "
+     "privacidad. Reconocemos que cuando eliges proporcionar información, "
+     "confías en que actuaremos de manera responsable. Es por eso que hemos "
+     "establecido una política para proteger tu información personal. Siempre "
+     "puedes visitar y navegar el sitio web sin necesidad de darnos tu "
+     "información personal."),
+    ("Nota legal",
+     "Si bien la astrología no es una ciencia exacta, te recomendamos "
+     "encarecidamente no tomar literalmente las interpretaciones que puedas "
+     "recibir con una interpretación. Utiliza tu sentido común y tu propio "
+     "juicio; las interpretaciones están destinadas a reflejar procesos propios "
+     "de pensamiento. La astrología brinda información, mas no predice "
+     "absolutamente los eventos particulares de tus decisiones, ni te da "
+     "consejos absolutos sobre las acciones o las decisiones que debes tomar "
+     "con respecto a las circunstancias de tu vida actual."),
+    ("Oficial y legal",
+     "https://www.mauriciopuerta.tv, Saturn Marketing LLC o Mauricio Puerta® no "
+     "hacen representaciones o garantías de ningún tipo, expresas o implícitas, "
+     "en cuanto a la operación del sitio, información, contenido, materiales o "
+     "productos incluidos. https://www.mauriciopuerta.tv, Saturn Marketing LLC o "
+     "Mauricio Puerta® no serán responsables de daños derivados del uso de esta "
+     "información. Todas las interpretaciones y consejos derivados del uso de "
+     "este sitio se entienden solo para fines de entretenimiento."),
+]
+
 _NAME_ICON = [
     ("Luna Negra", "aLunaNegra"), ("Nodo Norte", "aNoduloNorte"),
     ("Nodo Sur", "aNoduloSur"), ("Nódulo Lunar Norte", "aNoduloNorte"),
@@ -131,6 +179,57 @@ _REGENTE = {"Aries": "Marte", "Taurus": "Venus", "Gemini": "Mercurio",
             "Cancer": "Luna", "Leo": "Sol", "Virgo": "Quirón", "Libra": "Venus",
             "Scorpio": "Plutón", "Sagittarius": "Júpiter", "Capricorn": "Saturno",
             "Aquarius": "Urano", "Pisces": "Neptuno"}
+_SIGNS_EN = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra',
+             'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
+_SIGNS_ES = ['Aries', 'Tauro', 'Géminis', 'Cáncer', 'Leo', 'Virgo', 'Libra',
+             'Escorpio', 'Sagitario', 'Capricornio', 'Acuario', 'Piscis']
+_ES_BY_EN = dict(zip(_SIGNS_EN, _SIGNS_ES))
+
+# Regentes de decanatos por triplicidad (mismo sistema de la rueda, con Quirón)
+_DECAN_RULERS = [
+    ["aMarte", "aSol", "aJupiter"],    ["aVenus", "aChiron", "aSaturno"],
+    ["aMercurio", "aVenus", "aUrano"], ["aLuna", "aPluton", "aNeptuno"],
+    ["aSol", "aJupiter", "aMarte"],    ["aChiron", "aSaturno", "aVenus"],
+    ["aVenus", "aUrano", "aMercurio"], ["aPluton", "aNeptuno", "aLuna"],
+    ["aJupiter", "aMarte", "aSol"],    ["aSaturno", "aVenus", "aChiron"],
+    ["aUrano", "aMercurio", "aVenus"], ["aNeptuno", "aLuna", "aPluton"]]
+_ORD_DECAN = ["primer", "segundo", "tercer"]
+
+
+def build_decanates(chart):
+    """Para cada casa: en qué decanato cae su cúspide, quién rige ese decanato
+    y dónde está ese regente (signo y casa). Relaciona decanato → regente →
+    su ubicación, como pide el método. Aparece en todos los reportes."""
+    planets = {p['key']: p for p in chart['planets']}
+    items = []
+    for h in chart.get('houses', []):
+        si = h.get('sign_index', 1) - 1
+        deg = h.get('deg', 0)
+        dec = min(2, int(deg) // 10)
+        try:
+            rk = _DECAN_RULERS[si][dec]
+        except Exception:
+            continue
+        reg = planets.get(rk)
+        reg_name = _NAME_BY_KEY.get(rk, rk)
+        title = "Casa %s · cúspide en %s" % (h.get('roman', ''), h.get('sign_es', h.get('sign', '')))
+        if reg:
+            reg_sign = reg.get('sign_es', reg.get('sign', ''))
+            reg_house = ROMAN[reg.get('house', 1) - 1]
+            txt = ("La cúspide de tu Casa %s cae en el %s decanato de %s "
+                   "(grados %d a %d), cuyo regente es %s. En esta carta, %s está "
+                   "en %s, en la Casa %s: observa con qué personas de %s y en los "
+                   "temas de la Casa %s puedes trabajar el ámbito de esta casa."
+                   % (h.get('roman', ''), _ORD_DECAN[dec], h.get('sign_es', ''),
+                      dec * 10, dec * 10 + 10, reg_name, reg_name, reg_sign,
+                      reg_house, reg_sign, reg_house))
+        else:
+            txt = ("La cúspide de tu Casa %s cae en el %s decanato de %s "
+                   "(grados %d a %d), cuyo regente es %s."
+                   % (h.get('roman', ''), _ORD_DECAN[dec], h.get('sign_es', ''),
+                      dec * 10, dec * 10 + 10, reg_name))
+        items.append((title, [txt]))
+    return items
 _CRUZ = {"Aries": "cardinal", "Cancer": "cardinal", "Libra": "cardinal",
          "Capricorn": "cardinal", "Taurus": "fija", "Leo": "fija",
          "Scorpio": "fija", "Aquarius": "fija", "Gemini": "mutable",
@@ -188,6 +287,11 @@ def build_sections(chart, chart_type='natal', house_key='house', aspects=None):
     if cusp_items:
         sections.append(("Las cúspides de las casas", cusp_items))
 
+    # Decanato de cada cúspide y ubicación de su regente (en todos los reportes)
+    dec_items = build_decanates(chart)
+    if dec_items:
+        sections.append(("Los decanatos de tus casas y sus regentes", dec_items))
+
     asp = nat.get('aspects', {})
     name_es = {p['key']: p['name'] for p in chart['planets']}
     asp_es = {'Conjunction': 'conjunción', 'Opposition': 'oposición', 'Trine': 'trígono',
@@ -218,11 +322,12 @@ def build_sections(chart, chart_type='natal', house_key='house', aspects=None):
 
 # ── Preámbulo ───────────────────────────────────────────────────────────
 
-def build_preamble(chart):
+def build_preamble(chart, chart_type='natal'):
     pre = _preamble()
     if not pre:
         return []
     planets = {p['key']: p for p in chart['planets']}
+    by_name = {p.get('name'): p for p in chart['planets']}
     sun = planets.get('aSol', {})
     moon = planets.get('aLuna', {})
     sun_sign_en = sun.get('sign', 'Aries')
@@ -233,31 +338,58 @@ def build_preamble(chart):
     moon_roman = ROMAN[moon.get('house', 1) - 1]
     sun_house = "Casa " + sun_roman
     moon_house = "Casa " + moon_roman
+
+    # Tierra = signo opuesto al Sol (la Tierra no se calcula como planeta)
+    try:
+        earth_sign = _SIGNS_ES[(_SIGNS_EN.index(sun_sign_en) + 6) % 12]
+    except ValueError:
+        earth_sign = ''
+
+    # Regente del signo solar: su nombre, su signo y su casa
     regente = _REGENTE.get(sun_sign_en, 'Sol')
-    hl_signos = {sun_sign, moon_sign, asc_sign}
-    hl_casas = {sun_house, moon_house, "Casa I"}
-    hl_planetas = {"Sol", "Luna", regente}
+    reg_p = by_name.get(regente, {})
+    ruler_sign = reg_p.get('sign_es', '')
+    ruler_house = ("Casa " + ROMAN[reg_p.get('house', 1) - 1]) if reg_p else ''
+
+    # Resaltados en rojo (línea completa) — Sol, Luna, Tierra y regente solar
+    hl_signos = {s for s in (sun_sign, moon_sign, earth_sign, ruler_sign) if s}
+    hl_casas = {h for h in (sun_house, moon_house, ruler_house) if h}
+    hl_planetas = {p for p in ("Sol", "Luna", "Tierra", regente) if p}
 
     b = []
-    b.append(("h2", pre.get('intro_titulo', 'Qué es una carta astral natal')))
-    for p in pre.get('intro', []):
-        if p.startswith('1.'):
-            p += " En tu caso, tu Sol está en %s, en la Casa %s." % (sun_sign, sun_roman)
-        elif p.startswith('2.'):
-            p += " En tu caso, tu Ascendente es %s." % asc_sign
-        elif p.startswith('3.'):
-            p += " En tu caso, tu Luna está en %s, en la Casa %s." % (moon_sign, moon_roman)
-        b.append(("p", p))
+    if chart_type == 'solar_return':
+        b.append(("h2", "Tu retorno solar y tu esencia"))
+        b.append(("p", "Tu retorno solar conserva el Sol en %s, el mismo signo de tu "
+                        "esencia; por eso este ciclo reafirma la cruz y el elemento que "
+                        "elegiste, ahora aplicados al año que comienza. Aquí tienes, "
+                        "adaptados a este retorno, los mandamientos zodiacales y las "
+                        "claves de tu cruz y tu elemento." % sun_sign))
+    elif chart_type == 'combined':
+        b.append(("h2", "El Sol de la carta combinada y su esencia"))
+        b.append(("p", "El Sol de esta carta combinada está en %s. A partir de él se "
+                        "definen la cruz y el elemento del vínculo, con sus "
+                        "mandamientos. Aquí los tienes, adaptados a la relación que "
+                        "ambas personas forman." % sun_sign))
+    else:
+        b.append(("h2", pre.get('intro_titulo', 'Qué es una carta astral natal')))
+        for p in pre.get('intro', []):
+            if p.startswith('1.'):
+                p += " En tu caso, tu Sol está en %s, en la Casa %s." % (sun_sign, sun_roman)
+            elif p.startswith('2.'):
+                p += " En tu caso, tu Ascendente es %s." % asc_sign
+            elif p.startswith('3.'):
+                p += " En tu caso, tu Luna está en %s, en la Casa %s." % (moon_sign, moon_roman)
+            b.append(("p", p))
     b.append(("h3", "Los mandamientos zodiacales"))
     b.append(("p", pre.get('mand_signos_intro', '')))
     for k, v in pre.get('mand_signos', {}).items():
-        b.append(("item", k, v, k in hl_signos))
+        b.append(("mand", k, v, k in hl_signos))
     b.append(("p", pre.get('mand_casas_intro', '')))
     for k, v in pre.get('mand_casas', {}).items():
-        b.append(("item", k, v, k in hl_casas))
+        b.append(("mand", k, v, k in hl_casas))
     b.append(("p", pre.get('mand_planetas_intro', '')))
     for k, v in pre.get('mand_planetas', {}).items():
-        b.append(("item", k, v, k in hl_planetas))
+        b.append(("mand", k, v, k in hl_planetas))
     b.append(("p", pre.get('mand_cierre', '')))
     b.append(("p", pre.get('puente_cruz', '')))
 
@@ -330,10 +462,31 @@ def build_glossary():
         b.append(("p", g['casas_intro']))
     for s in g.get('casas', []):
         b.append(("item", s['nombre'], s.get('desc', ''), False))
-    if g.get('comentarios_finales'):
-        b.append(("h3", "Comentarios finales"))
-        b.append(("p", g['comentarios_finales']))
     return b
+
+
+_CLOSING_NOUN = {
+    'natal': 'Carta Natal', 'solar_return': 'Retorno Solar',
+    'progressed': 'Carta Progresada', 'combined': 'Carta Combinada',
+    'transit': 'lectura de Tránsitos',
+}
+
+
+def build_closing(chart_type='natal'):
+    """Cierre atractivo del reporte, adaptado al tipo de carta."""
+    noun = _CLOSING_NOUN.get(chart_type, 'Carta Natal')
+    g = _glossary()
+    consulta = (g.get('consulta_final')
+                or "Esta lectura es un resumen; si deseas profundizar, por favor "
+                   "solicita tu consulta en nuestra página web.")
+    txt = ("He de dejar aquí el estudio de tu %s, no sin antes recordarte que "
+           "TODOS los signos mencionados aquí han de aparecer en algún momento de "
+           "tu vida, con personas que nacieron bajo ellos y que en esta existencia "
+           "tienen un compromiso vital contigo. Ninguna de ellas es culpable de lo "
+           "que te suceda, pero sí responsable de lo que todos escribieron como su "
+           "libreto de vida; espero que sepas transformar todo aquello que te "
+           "produzca el encuentro con ellas en esta encarnación." % noun)
+    return [("h2", "Palabras finales"), ("pc", txt), ("pc", consulta)]
 
 
 _LEGEND_PLANETS = [("aSol", "Sol"), ("aLuna", "Luna"), ("aMercurio", "Mercurio"),
@@ -395,7 +548,8 @@ def _png_from_dataurl(chart_png, max_side=900):
 # ════════════════════════════════════════════════════════════════════════
 
 def render_pdf(sections, chart_png_bytes, meta,
-               pre_blocks=None, legend=None, glossary=None, chart_png2_bytes=None):
+               pre_blocks=None, legend=None, glossary=None, chart_png2_bytes=None,
+               closing=None):
     """meta: dict(name, city, astrologer, date, time)"""
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import ParagraphStyle
@@ -418,6 +572,7 @@ def render_pdf(sections, chart_png_bytes, meta,
     person = meta.get('name') or ''
     astrologer = meta.get('astrologer') or _brand().get('astrologo_default', '')
     hoy = fecha_es(_date.today().isoformat())
+    cover_img = _cover_path(meta.get('chart_type'))   # portada de marca (o None)
 
     def esc(t):
         return t.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
@@ -432,17 +587,18 @@ def render_pdf(sections, chart_png_bytes, meta,
         return ''.join(parts)
 
     # Estilos (capítulos centrados)
-    st_h2 = ParagraphStyle('h2', fontName=bd, fontSize=16, leading=21,
-                           textColor=C.HexColor(NAVY), spaceBefore=18, spaceAfter=10,
+    # Tipografía más grande y aireada (lectores adultos mayores)
+    st_h2 = ParagraphStyle('h2', fontName=bd, fontSize=17.5, leading=23,
+                           textColor=C.HexColor(NAVY), spaceBefore=20, spaceAfter=12,
                            keepWithNext=1, alignment=TA_CENTER)
-    st_h3 = ParagraphStyle('h3', fontName=bd, fontSize=12, leading=15,
-                           textColor=C.HexColor(BLUE), spaceBefore=10, spaceAfter=6,
+    st_h3 = ParagraphStyle('h3', fontName=bd, fontSize=13.5, leading=18,
+                           textColor=C.HexColor(BLUE), spaceBefore=14, spaceAfter=7,
                            keepWithNext=1)
-    st_body = ParagraphStyle('b', fontName=bf, fontSize=10.3, leading=15,
+    st_body = ParagraphStyle('b', fontName=bf, fontSize=12, leading=18.5,
                              textColor=C.HexColor(INK), alignment=TA_JUSTIFY,
-                             spaceAfter=5, firstLineIndent=14)
-    st_item = ParagraphStyle('li', fontName=bf, fontSize=10.3, leading=16,
-                             textColor=C.HexColor(INK), leftIndent=14)
+                             spaceAfter=12, firstLineIndent=16)
+    st_item = ParagraphStyle('li', fontName=bf, fontSize=12, leading=18.5,
+                             textColor=C.HexColor(INK), leftIndent=14, spaceAfter=3)
 
     _WM_SIGNS = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra',
                  'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
@@ -474,6 +630,14 @@ def render_pdf(sections, chart_png_bytes, meta,
                 pass
 
     def on_cover(cv, doc):
+        # Si hay portada de marca para este tipo, va a página completa
+        if cover_img:
+            try:
+                cv.drawImage(cover_img, 0, 0, width=page_w, height=page_h,
+                             preserveAspectRatio=False, mask=None)
+                return
+            except Exception:
+                pass
         cv.saveState()
         cv.setFillColorRGB(0x0E / 255., 0x13 / 255., 0x32 / 255.)
         cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
@@ -513,6 +677,19 @@ def render_pdf(sections, chart_png_bytes, meta,
         p.lineTo(cx - r, cy); p.close()
         cv.drawPath(p, fill=0, stroke=1)
 
+    def _footer_sub():
+        _tipo = meta.get('subtitle', 'de Carta Natal')
+        if _tipo.lower().startswith('de '):
+            _tipo = _tipo[3:]
+        parts = [_tipo]
+        if person:
+            parts.append(person)
+        _f = meta.get('date', '')
+        if _f and len(_f.split('-')) == 3:
+            y, m, d = _f.split('-')
+            parts.append('%s-%s-%s' % (d, m, y))
+        return '  ·  ' + '  ·  '.join(parts)
+
     def on_body(cv, doc):
         cv.saveState()
         cv.setFillColor(C.HexColor(PAPER_BG)); cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
@@ -530,10 +707,7 @@ def render_pdf(sections, chart_png_bytes, meta,
         marca = 'REPORTE ASTRAL'
         cv.drawString(lm, bm * 0.42, marca)
         cv.setFont(it, 7.5); cv.setFillColor(C.HexColor(SLATE))
-        _tipo = meta.get('subtitle', 'de Carta Natal')
-        if _tipo.lower().startswith('de '):
-            _tipo = _tipo[3:]
-        sub = '  ·  ' + _tipo + (('  ·  ' + person) if person else '')
+        sub = _footer_sub()
         cv.drawString(lm + cv.stringWidth(marca, bf, 7.5), bm * 0.42, sub)
         num = str(doc.page)
         cx2 = page_w - rm - 8
@@ -556,11 +730,7 @@ def render_pdf(sections, chart_png_bytes, meta,
         marca = 'REPORTE ASTRAL'
         cv.drawString(lm, bm * 0.42, marca)
         cv.setFont(it, 7.5); cv.setFillColor(C.HexColor(SLATE))
-        _tipo = meta.get('subtitle', 'de Carta Natal')
-        if _tipo.lower().startswith('de '):
-            _tipo = _tipo[3:]
-        sub = '  ·  ' + _tipo + (('  ·  ' + person) if person else '')
-        cv.drawString(lm + cv.stringWidth(marca, bf, 7.5), bm * 0.42, sub)
+        cv.drawString(lm + cv.stringWidth(marca, bf, 7.5), bm * 0.42, _footer_sub())
         cx2 = land_w - rm - 8
         cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.7)
         _diamond(cv, cx2, bm * 0.46, 8.5)
@@ -577,12 +747,22 @@ def render_pdf(sections, chart_png_bytes, meta,
 
     frame = Frame(lm, bm, page_w - lm - rm, page_h - tm - bm)
     frame_land = Frame(lm, bm, land_w - lm - rm, land_h - tm * 0.7 - bm)
+    frame_full = Frame(0, 0, page_w, page_h, leftPadding=0, rightPadding=0,
+                       topPadding=0, bottomPadding=0)
+
+    def on_plate(cv, doc):
+        cv.saveState()
+        cv.setFillColor(C.HexColor('#FFFFFF'))
+        cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+        cv.restoreState()
+
     doc = _Doc(buf, pagesize=A4, leftMargin=lm, rightMargin=rm,
                topMargin=tm, bottomMargin=bm)
     doc.addPageTemplates([
         PageTemplate(id='Cover', frames=[Frame(lm, bm, page_w - lm - rm, page_h - tm - bm)], onPage=on_cover),
         PageTemplate(id='Body', frames=[frame], onPage=on_body),
         PageTemplate(id='Wheels', frames=[frame_land], onPage=on_wheels, pagesize=landscape(A4)),
+        PageTemplate(id='Plate', frames=[frame_full], onPage=on_plate),
     ])
 
     nkey = [0]
@@ -600,8 +780,45 @@ def render_pdf(sections, chart_png_bytes, meta,
         p._tocKey = key
         content.append(p)
 
+    # Estilos para los mandamientos tabulados
+    st_mand_l = ParagraphStyle('mndl', fontName=bd, fontSize=12, leading=17,
+                               textColor=C.HexColor(INK))
+    st_mand_r = ParagraphStyle('mndr', fontName=bf, fontSize=12, leading=17,
+                               textColor=C.HexColor(INK))
+    st_mand_lR = ParagraphStyle('mndlR', fontName=bd, fontSize=12, leading=17,
+                                textColor=C.HexColor(RED))
+    st_mand_rR = ParagraphStyle('mndrR', fontName=bf, fontSize=12, leading=17,
+                                textColor=C.HexColor(RED))
+
+    def flush_mand(rows):
+        """Vuelca los mandamientos acumulados como tabla alineada (signo | frase).
+        Las líneas resaltadas van completas en rojo."""
+        if not rows:
+            return
+        data_rows = []
+        for label, frase, hl in rows:
+            lp = Paragraph(with_icons(label, 9), st_mand_lR if hl else st_mand_l)
+            rp = Paragraph(esc(frase), st_mand_rR if hl else st_mand_r)
+            data_rows.append([lp, rp])
+        col0 = 4.6 * cm
+        t = Table(data_rows, colWidths=[col0, (page_w - lm - rm) - col0])
+        t.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+            ('LEFTPADDING', (0, 0), (0, -1), 6),
+        ]))
+        content.append(t)
+
     if pre_blocks:
+        mand_buf = []
         for blk in pre_blocks:
+            if blk[0] == "mand":
+                mand_buf.append((blk[1], blk[2], blk[3]))
+                continue
+            if mand_buf:
+                flush_mand(mand_buf); mand_buf = []
+                content.append(Spacer(1, 8))
             if blk[0] == "h2":
                 H2(blk[1])
             elif blk[0] == "h3":
@@ -614,6 +831,8 @@ def render_pdf(sections, chart_png_bytes, meta,
                 nm_markup = ('<font color="%s"><b>%s</b></font>' % (RED, nm_markup)) if hl \
                     else ('<b>%s</b>' % nm_markup)
                 content.append(Paragraph(nm_markup + ' — ' + esc(tx), st_item))
+        if mand_buf:
+            flush_mand(mand_buf); mand_buf = []
         content.append(PageBreak())
 
     legend_done = [False]
@@ -665,7 +884,7 @@ def render_pdf(sections, chart_png_bytes, meta,
                 content.append(Spacer(1, 4))
                 colw = (land_w - lm - rm) / 2.0
                 # Deja sitio para la leyenda en la misma página
-                each = min(colw - 0.5 * cm, 9.5 * cm)
+                each = min(colw - 0.5 * cm, 8.7 * cm)
                 st_wcap = ParagraphStyle('wcap', fontName=bd, fontSize=12, leading=15,
                                          textColor=C.HexColor(BLUE), alignment=TA_CENTER,
                                          spaceAfter=5)
@@ -694,12 +913,13 @@ def render_pdf(sections, chart_png_bytes, meta,
                 H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
                 content.append(Spacer(1, 6))
                 content.append(Image(io.BytesIO(chart_png_bytes), width=disp_w, height=disp_h))
+                content.append(PageBreak())   # la rueda ocupa su propia página
         except Exception:
             pass
 
     if legend and not legend_done[0]:
         add_legend()
-        content.append(PageBreak())
+        content.append(Spacer(1, 18))
 
     for sec_title, items in sections:
         H2(sec_title)
@@ -709,7 +929,7 @@ def render_pdf(sections, chart_png_bytes, meta,
                 content.append(Paragraph(with_icons(p, 8), st_body))
 
     if glossary:
-        content.append(PageBreak())
+        content.append(Spacer(1, 20))
         for blk in glossary:
             if blk[0] == "h2":
                 H2(blk[1])
@@ -722,7 +942,47 @@ def render_pdf(sections, chart_png_bytes, meta,
                 content.append(Paragraph('<b>%s</b> — %s' % (with_icons(nm, 8), esc(tx)),
                                          st_item))
 
-    # ── Redes sociales del astrólogo ─────────────────────────────────────
+    # ── Cierre / palabras finales ────────────────────────────────────────
+    if closing:
+        st_close = ParagraphStyle('close', fontName=si, fontSize=13, leading=21,
+                                  textColor=C.HexColor(NAVY), alignment=TA_CENTER,
+                                  spaceBefore=8, spaceAfter=14,
+                                  leftIndent=18, rightIndent=18)
+        content.append(PageBreak())
+        for blk in closing:
+            if blk[0] == "h2":
+                H2(blk[1])
+            elif blk[0] == "pc":
+                content.append(Paragraph(esc(blk[1]), st_close))
+
+    # ── Antepenúltima: página de información (rueda educativa) ────────────
+    info_img = _info_path()
+    if info_img:
+        try:
+            from PIL import Image as PILImage2
+            iw, ih = PILImage2.open(info_img).size
+            w = page_w; h = w * ih / iw
+            if h > page_h:
+                h = page_h; w = h * iw / ih
+            content.append(NextPageTemplate('Plate'))
+            content.append(PageBreak())
+            content.append(Image(info_img, width=w, height=h))
+            content.append(NextPageTemplate('Body'))
+        except Exception:
+            pass
+
+    # ── Penúltima: aviso legal y de privacidad ───────────────────────────
+    content.append(PageBreak())
+    st_dl_h = ParagraphStyle('dlh', fontName=bd, fontSize=12.5, leading=16,
+                             textColor=C.HexColor(NAVY), spaceBefore=12, spaceAfter=4)
+    st_dl_p = ParagraphStyle('dlp', fontName=bf, fontSize=10.5, leading=16,
+                             textColor=C.HexColor(INK), alignment=TA_JUSTIFY, spaceAfter=8)
+    H2("Aviso legal y de privacidad")
+    for htitle, ptext in _DISCLAIMER:
+        content.append(Paragraph(esc(htitle), st_dl_h))
+        content.append(Paragraph(esc(ptext), st_dl_p))
+
+    # ── Redes sociales del astrólogo (última página) ─────────────────────
     brand = _brand()
     redes = brand.get('redes', [])
     if redes:
@@ -755,66 +1015,73 @@ def render_pdf(sections, chart_png_bytes, meta,
     ]
     toc.dotsMinLevel = 0
 
-    # ── Portada (serif elegante) ─────────────────────────────────────────
-    st_cv1 = ParagraphStyle('cv1', fontName=sb, fontSize=30, leading=36,
-                            textColor=C.HexColor(GOLD), alignment=TA_CENTER)
-    st_cv2 = ParagraphStyle('cv2', fontName=si, fontSize=17, leading=22,
-                            textColor=C.HexColor(SLATE), alignment=TA_CENTER)
-    st_cv3 = ParagraphStyle('cv3', fontName=sb, fontSize=19, leading=25,
-                            textColor=C.HexColor(LIGHT), alignment=TA_CENTER)
-    st_cv4 = ParagraphStyle('cv4', fontName=sf, fontSize=12.5, leading=19,
-                            textColor=C.HexColor(SLATE), alignment=TA_CENTER)
+    # ── Portada / página de datos ────────────────────────────────────────
+    def build_data_flow(on_dark):
+        """Datos de la persona. on_dark=True → sobre la portada diseñada
+        (fondo oscuro); on_dark=False → página de datos sobre fondo blanco."""
+        c_gold = GOLD
+        c_sub = SLATE
+        c_name = LIGHT if on_dark else NAVY
+        c_line = SLATE if on_dark else INK
+        c_ret = GOLD
+        s1 = ParagraphStyle('d1', fontName=sb, fontSize=30, leading=36,
+                            textColor=C.HexColor(c_gold), alignment=TA_CENTER)
+        s2 = ParagraphStyle('d2', fontName=si, fontSize=17, leading=22,
+                            textColor=C.HexColor(c_sub), alignment=TA_CENTER)
+        s3 = ParagraphStyle('d3', fontName=sb, fontSize=19, leading=25,
+                            textColor=C.HexColor(c_name), alignment=TA_CENTER)
+        s4 = ParagraphStyle('d4', fontName=sf, fontSize=12.5, leading=19,
+                            textColor=C.HexColor(c_line), alignment=TA_CENTER)
+        s5 = ParagraphStyle('d5', fontName=si, fontSize=11, leading=16,
+                            textColor=C.HexColor(c_ret), alignment=TA_CENTER)
+        s6 = ParagraphStyle('d6', fontName=sf, fontSize=11.5, leading=17,
+                            textColor=C.HexColor(c_sub), alignment=TA_CENTER)
+        f = [Paragraph('Reporte Astrológico', s1), Spacer(1, 4),
+             Paragraph(esc(meta.get('subtitle', 'de Carta Natal')), s2), Spacer(1, 34)]
+        if person:
+            f.append(Paragraph(esc(person), s3)); f.append(Spacer(1, 10))
+        lf = meta.get('time', '')
+        if lf:
+            lf += '  —  '
+        lf += fecha_es(meta.get('date', ''))
+        f.append(Paragraph(esc(lf), s4))
+        if meta.get('city'):
+            f.append(Paragraph(esc(meta['city']), s4))
+        if meta.get('chart_type') == 'solar_return' and meta.get('return_moment'):
+            f.append(Spacer(1, 16))
+            if meta.get('relocated') and meta.get('return_place'):
+                f.append(Paragraph('Relocalizado en: ' + esc(meta['return_place']), s5))
+            rm = esc(meta['return_moment'])
+            if meta.get('return_tz'):
+                rm += '  (' + esc(meta['return_tz']) + ')'
+            f.append(Paragraph('El retorno solar exacto ocurre el', s6))
+            f.append(Paragraph(rm, s5))
+            if meta.get('return_ut'):
+                f.append(Paragraph(esc(meta['return_ut']) + ' UT', s6))
+        pb2 = meta.get('person_b')
+        if meta.get('chart_type') == 'combined' and pb2:
+            f.append(Spacer(1, 14)); f.append(Paragraph('en vínculo con', s6))
+            if pb2.get('name'):
+                f.append(Paragraph(esc(pb2['name']), s3))
+            lb = pb2.get('time', '')
+            if lb:
+                lb += '  —  '
+            lb += fecha_es(pb2.get('date', ''))
+            f.append(Paragraph(esc(lb), s4))
+            if pb2.get('city'):
+                f.append(Paragraph(esc(pb2['city']), s4))
+        return f
 
-    flow = [NextPageTemplate('Body'), Spacer(1, page_h * 0.24),
-            Paragraph('Reporte Astrológico', st_cv1),
-            Spacer(1, 4),
-            Paragraph(esc(meta.get('subtitle', 'de Carta Natal')), st_cv2),
-            Spacer(1, 34)]
-    if person:
-        flow.append(Paragraph(esc(person), st_cv3))
-        flow.append(Spacer(1, 10))
-    linea_fecha = meta.get('time', '')
-    if linea_fecha:
-        linea_fecha += '  —  '
-    linea_fecha += fecha_es(meta.get('date', ''))
-    flow.append(Paragraph(esc(linea_fecha), st_cv4))
-    if meta.get('city'):
-        flow.append(Paragraph(esc(meta['city']), st_cv4))
-
-    st_cv5 = ParagraphStyle('cv5', fontName=si, fontSize=11, leading=16,
-                            textColor=C.HexColor(GOLD), alignment=TA_CENTER)
-    st_cv6 = ParagraphStyle('cv6', fontName=sf, fontSize=11.5, leading=17,
-                            textColor=C.HexColor(SLATE), alignment=TA_CENTER)
-
-    # Retorno solar: lugar y momento exacto del retorno (no es la hora de nacimiento)
-    if meta.get('chart_type') == 'solar_return' and meta.get('return_moment'):
-        flow.append(Spacer(1, 16))
-        if meta.get('relocated') and meta.get('return_place'):
-            flow.append(Paragraph('Relocalizado en: ' + esc(meta['return_place']), st_cv5))
-        rmoment = esc(meta['return_moment'])
-        if meta.get('return_tz'):
-            rmoment += '  (' + esc(meta['return_tz']) + ')'
-        flow.append(Paragraph('El retorno solar exacto ocurre el', st_cv6))
-        flow.append(Paragraph(rmoment, st_cv5))
-        if meta.get('return_ut'):
-            flow.append(Paragraph(esc(meta['return_ut']) + ' UT', st_cv6))
-
-    # Combinada: segunda persona con sus datos
-    pb = meta.get('person_b')
-    if meta.get('chart_type') == 'combined' and pb:
-        flow.append(Spacer(1, 14))
-        flow.append(Paragraph('en vínculo con', st_cv6))
-        if pb.get('name'):
-            flow.append(Paragraph(esc(pb['name']), st_cv3))
-        lb = pb.get('time', '')
-        if lb:
-            lb += '  —  '
-        lb += fecha_es(pb.get('date', ''))
-        flow.append(Paragraph(esc(lb), st_cv4))
-        if pb.get('city'):
-            flow.append(Paragraph(esc(pb['city']), st_cv4))
-
-    flow.append(PageBreak())
+    if cover_img:
+        # Página 1 = portada de marca (imagen); página 2 = datos sobre blanco
+        flow = [NextPageTemplate('Body'), PageBreak(), Spacer(1, 70)]
+        flow += build_data_flow(on_dark=False)
+        flow.append(PageBreak())
+    else:
+        # Portada diseñada (fondo oscuro) con los datos encima
+        flow = [NextPageTemplate('Body'), Spacer(1, page_h * 0.24)]
+        flow += build_data_flow(on_dark=True)
+        flow.append(PageBreak())
 
     flow.append(Paragraph('Índice de contenidos', st_h2))
     flow.append(toc)
@@ -829,7 +1096,8 @@ def render_pdf(sections, chart_png_bytes, meta,
 # ════════════════════════════════════════════════════════════════════════
 
 def render_docx(sections, chart_png_bytes, meta,
-                pre_blocks=None, legend=None, glossary=None, chart_png2_bytes=None):
+                pre_blocks=None, legend=None, glossary=None, chart_png2_bytes=None,
+                closing=None):
     from docx import Document
     from docx.shared import Pt, RGBColor, Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -890,6 +1158,11 @@ def render_docx(sections, chart_png_bytes, meta,
         par._p.append(fld)
 
     doc = Document()
+    # Letra base más grande y aireada (lectores adultos mayores)
+    _normal = doc.styles['Normal']
+    _normal.font.size = Pt(12.5)
+    _normal.paragraph_format.space_after = Pt(10)
+    _normal.paragraph_format.line_spacing = 1.25
     for s in doc.sections:
         s.top_margin = Inches(1); s.bottom_margin = Inches(1)
         s.left_margin = Inches(1); s.right_margin = Inches(1)
@@ -903,9 +1176,20 @@ def render_docx(sections, chart_png_bytes, meta,
         r.font.size = Pt(size); r.font.color.rgb = color; r.font.name = font
         return p
 
-    # Portada
-    for _ in range(4):
+    # Portada de marca (imagen) + página de datos
+    cover_img = _cover_path(meta.get('chart_type'))
+    if cover_img:
+        cp = doc.add_paragraph(); cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cp.paragraph_format.space_after = Pt(0)
+        try:
+            cp.add_run().add_picture(cover_img, width=Inches(6.9))
+        except Exception:
+            pass
+        doc.add_page_break()
         doc.add_paragraph()
+    else:
+        for _ in range(4):
+            doc.add_paragraph()
     cover_line('Reporte Astrológico', 28, GOLD_RGB, bold=True)
     cover_line(meta.get('subtitle', 'de Carta Natal'), 15, SLATE_RGB, italic=True, space_after=22)
     if person:
@@ -970,8 +1254,33 @@ def render_docx(sections, chart_png_bytes, meta,
         add_text_with_icons(ip, nm, bold=True, color=RED_RGB if hl else INK_RGB)
         ip.add_run(" — " + tx)
 
+    def flush_mand_docx(rows):
+        if not rows:
+            return
+        tbl = doc.add_table(rows=len(rows), cols=2)
+        tbl.allow_autofit = True
+        for i, (label, frase, hl) in enumerate(rows):
+            col = RED_RGB if hl else INK_RGB
+            lc = tbl.cell(i, 0).paragraphs[0]
+            lr = lc.add_run(label); lr.bold = True; lr.font.color.rgb = col
+            lr.font.size = Pt(12)
+            rc = tbl.cell(i, 1).paragraphs[0]
+            rr = rc.add_run(frase); rr.font.color.rgb = col; rr.font.size = Pt(12)
+        try:
+            for row in tbl.rows:
+                row.cells[0].width = Inches(1.9)
+                row.cells[1].width = Inches(4.6)
+        except Exception:
+            pass
+
     if pre_blocks:
+        mand_buf = []
         for blk in pre_blocks:
+            if blk[0] == "mand":
+                mand_buf.append((blk[1], blk[2], blk[3]))
+                continue
+            if mand_buf:
+                flush_mand_docx(mand_buf); mand_buf = []
             if blk[0] == "h2":
                 H2(blk[1])
             elif blk[0] == "h3":
@@ -980,6 +1289,8 @@ def render_docx(sections, chart_png_bytes, meta,
                 body_p(blk[1])
             elif blk[0] == "item":
                 item_p(blk[1], blk[2], blk[3])
+        if mand_buf:
+            flush_mand_docx(mand_buf); mand_buf = []
 
     if chart_png_bytes:
         caps = meta.get('img_captions')
@@ -1053,6 +1364,36 @@ def render_docx(sections, chart_png_bytes, meta,
                 body_p(blk[1])
             elif blk[0] == "item":
                 item_p(blk[1], blk[2], False)
+
+    # Cierre / palabras finales
+    if closing:
+        doc.add_page_break()
+        for blk in closing:
+            if blk[0] == "h2":
+                H2(blk[1])
+            elif blk[0] == "pc":
+                cp = doc.add_paragraph(); cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                cr = cp.add_run(blk[1]); cr.italic = True
+                cr.font.size = Pt(13); cr.font.color.rgb = NAVY_RGB
+
+    # Antepenúltima: página de información (rueda educativa)
+    info_img = _info_path()
+    if info_img:
+        doc.add_page_break()
+        ip = doc.add_paragraph(); ip.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        try:
+            ip.add_run().add_picture(info_img, width=Inches(6.9))
+        except Exception:
+            pass
+
+    # Penúltima: aviso legal y de privacidad
+    doc.add_page_break()
+    H2("Aviso legal y de privacidad")
+    for htitle, ptext in _DISCLAIMER:
+        hp = doc.add_paragraph(); hr = hp.add_run(htitle)
+        hr.bold = True; hr.font.color.rgb = NAVY_RGB; hr.font.size = Pt(12.5)
+        dp = doc.add_paragraph(); dp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        dr = dp.add_run(ptext); dr.font.size = Pt(10.5)
 
     brand = _brand()
     redes = brand.get('redes', [])
@@ -1139,8 +1480,8 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
         base_meta = data
         _intro, sections = build_sections(chart, 'natal')
 
-    if ct == "natal":
-        pre_blocks = build_preamble(chart)
+    if ct in ("natal", "solar_return", "combined"):
+        pre_blocks = build_preamble(chart, ct)
     else:
         pre_blocks = []
         if _INTRO_TITLE.get(ct):
@@ -1154,6 +1495,7 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
 
     legend = build_legend()
     glossary = build_glossary()
+    closing = build_closing(ct)
     person = (name or '').strip()
     meta = {
         'name': person,
@@ -1198,10 +1540,10 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
     if fmt == 'docx':
         out = render_docx(sections, png, meta,
                           pre_blocks=pre_blocks, legend=legend, glossary=glossary,
-                          chart_png2_bytes=png2)
+                          chart_png2_bytes=png2, closing=closing)
         return out, safe + '.docx', \
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     out = render_pdf(sections, png, meta,
                      pre_blocks=pre_blocks, legend=legend, glossary=glossary,
-                     chart_png2_bytes=png2)
+                     chart_png2_bytes=png2, closing=closing)
     return out, safe + '.pdf', 'application/pdf'

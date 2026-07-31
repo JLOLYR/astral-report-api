@@ -71,7 +71,7 @@ _ICONS_DIR = os.path.join(_BASE, 'icons')
 # ── Portadas de marca y página de información (imágenes de página completa) ─
 _COVERS_DIR = os.path.join(_BASE, 'covers')
 _COVER_FILE = {'natal': 'natal.jpg', 'solar_return': 'solar_return.jpg',
-               'combined': 'combined.jpg'}
+               'combined': 'combined.jpg', 'akashic': 'akashic.jpg'}
 
 
 def _cover_path(chart_type):
@@ -186,6 +186,10 @@ def _brand():
     return _load_json('brand_es.json')
 
 
+def _akashic():
+    return _load_json('akashic_es.json')
+
+
 _REGENTE = {"Aries": "Marte", "Taurus": "Venus", "Gemini": "Mercurio",
             "Cancer": "Luna", "Leo": "Sol", "Virgo": "Quirón", "Libra": "Venus",
             "Scorpio": "Plutón", "Sagittarius": "Júpiter", "Capricorn": "Saturno",
@@ -285,6 +289,142 @@ def build_transit_intro(data):
         if l:
             paras.append(l)
     return paras
+
+
+def build_akashic(chart):
+    """Registros Akáshicos = estudio de la Casa XII: el signo de su cúspide,
+    su regente (dónde está), los planetas dentro de ella y el regente del
+    decanato de su cúspide. Devuelve (pre_blocks, sections)."""
+    ak = _akashic()
+    interp = _interp()
+    nat = interp.get('natal', {})
+    pm = interp.get('planet_meanings', {})
+    by_name = {p.get('name'): p for p in chart['planets']}
+    key_by_name = {v: k for k, v in _NAME_BY_KEY.items()}
+
+    houses = chart.get('houses', [])
+    h12 = houses[11] if len(houses) >= 12 else {}
+    s12_en = h12.get('sign', 'Pisces')
+    s12_es = h12.get('sign_es', s12_en)
+
+    # Regente del signo de la Casa XII
+    ruler_name = _REGENTE.get(s12_en, 'Neptuno')
+    ruler_p = by_name.get(ruler_name)
+    # Regente del decanato de la cúspide de la Casa XII
+    si = h12.get('sign_index', 1) - 1
+    dec = min(2, int(h12.get('deg', 0)) // 10)
+    try:
+        dk = _DECAN_RULERS[si][dec]
+    except Exception:
+        dk = None
+    dec_p = {p['key']: p for p in chart['planets']}.get(dk) if dk else None
+    dec_name = _NAME_BY_KEY.get(dk, dk) if dk else ''
+    # Planetas dentro de la Casa XII
+    inside = [p for p in chart['planets'] if p.get('house') == 12]
+
+    # Conjuntos en rojo (signos, casas y planetas involucrados con la Casa XII)
+    red_signs = {s12_es}
+    red_houses = {'Casa XII'}
+    red_planets = set()
+    if ruler_p:
+        red_signs.add(ruler_p.get('sign_es', ''))
+        red_houses.add('Casa ' + ROMAN[ruler_p.get('house', 1) - 1])
+        red_planets.add(ruler_name)
+    for p in inside:
+        red_signs.add(p.get('sign_es', ''))
+        red_planets.add(p.get('name'))
+    if dec_p:
+        red_signs.add(dec_p.get('sign_es', ''))
+        red_houses.add('Casa ' + ROMAN[dec_p.get('house', 1) - 1])
+        red_planets.add(dec_name)
+
+    # ── Pre-bloques: intro + mandamientos + significado general de la Casa XII
+    pre = []
+    pre.append(("h2", ak.get('intro_titulo', 'Qué son los Registros Akáshicos')))
+    for para in ak.get('intro', []):
+        pre.append(("p", para))
+    if ak.get('metodologia'):
+        pre.append(("p", ak['metodologia']))
+    pre.append(("h3", ak.get('mand_titulo', 'Los mandamientos zodiacales')))
+    if ak.get('mand_intro'):
+        pre.append(("p", ak['mand_intro']))
+    for sg, casa, frase in ak.get('mand', []):
+        hl = (sg in red_signs) or (casa in red_houses)
+        pre.append(("mand", '%s y %s' % (sg, casa), frase, hl))
+    if ak.get('mand_planetas_intro'):
+        pre.append(("p", ak['mand_planetas_intro']))
+    for nm, frase in ak.get('mand_planetas', {}).items():
+        pre.append(("mand", nm, frase, nm in red_planets))
+    pre.append(("h2", ak.get('casa12_titulo', 'El significado de tu Casa XII')))
+    for para in ak.get('casa12', []):
+        pre.append(("p", para))
+    if ak.get('puente_estudio'):
+        pre.append(("p", ak['puente_estudio']))
+
+    # ── Secciones: el estudio personalizado ──────────────────────────────
+    sections = []
+
+    def _pin(key, sign_en, house):
+        out = []
+        if pm.get(key):
+            out.append(pm[key])
+        t = nat.get('planet_in_sign', {}).get(key, {}).get(sign_en)
+        if t:
+            out.append(t)
+        t = nat.get('planet_in_house', {}).get(key, {}).get(str(house))
+        if t:
+            out.append(t)
+        return out
+
+    # 1. Signo en la cúspide de la Casa XII
+    items = []
+    cusp_txt = nat.get('cusp_in_sign', {}).get('12', {}).get(s12_en)
+    if cusp_txt:
+        items.append(("Tu Casa XII con %s en la cúspide" % s12_es, [cusp_txt]))
+    items.append(("El signo de tu vida pasada",
+                  ["Se dice que el signo que ocupa la cúspide de la Casa XII "
+                   "indica el signo que tuviste por ascendente en tu vida "
+                   "anterior: en tu caso, %s." % s12_es]))
+    sections.append(("El signo en la cúspide de tu Casa XII", items))
+
+    # 2. Regente de la Casa XII y dónde está
+    if ruler_p:
+        rk = ruler_p['key']
+        title = "%s, regente de tu Casa XII, en %s y en la Casa %s" % (
+            ruler_name, ruler_p.get('sign_es', ruler_p.get('sign', '')),
+            ROMAN[ruler_p.get('house', 1) - 1])
+        paras = _pin(rk, ruler_p.get('sign'), ruler_p.get('house', 1))
+        if paras:
+            sections.append(("El regente de tu Casa XII", [(title, paras)]))
+
+    # 3. Planetas dentro de la Casa XII
+    if inside:
+        items = []
+        for p in inside:
+            paras = _pin(p['key'], p.get('sign'), 12)
+            if paras:
+                items.append(("%s en %s, dentro de tu Casa XII"
+                              % (p['name'], p.get('sign_es', p.get('sign', ''))), paras))
+        if items:
+            sections.append(("Los planetas dentro de tu Casa XII", items))
+    else:
+        sections.append(("Los planetas dentro de tu Casa XII",
+            [("Tu Casa XII sin planetas",
+              ["No tienes planetas dentro de tu Casa XII. Esto no la deja vacía "
+               "de sentido: su historia se lee, sobre todo, a través del signo "
+               "de su cúspide, de su regente y del regente del decanato de esa "
+               "cúspide, que estudiamos aquí."])]))
+
+    # 4. Regente del decanato de la cúspide
+    if dec_p:
+        title = "%s, regente del %s decanato de tu cúspide, en %s y en la Casa %s" % (
+            dec_name, _ORD_DECAN[dec], dec_p.get('sign_es', dec_p.get('sign', '')),
+            ROMAN[dec_p.get('house', 1) - 1])
+        paras = _pin(dec_p['key'], dec_p.get('sign'), dec_p.get('house', 1))
+        if paras:
+            sections.append(("El regente del decanato de tu Casa XII", [(title, paras)]))
+
+    return pre, sections
 
 
 _CRUZ = {"Aries": "cardinal", "Cancer": "cardinal", "Libra": "cardinal",
@@ -535,18 +675,19 @@ def build_glossary():
 _CLOSING_NOUN = {
     'natal': 'Carta Natal', 'solar_return': 'Retorno Solar',
     'progressed': 'Carta Progresada', 'combined': 'Carta Combinada',
-    'transit': 'lectura de Tránsitos',
+    'transit': 'lectura de Tránsitos', 'akashic': 'Registros Akáshicos',
 }
 
 
 def build_closing(chart_type='natal'):
     """Cierre atractivo del reporte, adaptado al tipo de carta."""
     noun = _CLOSING_NOUN.get(chart_type, 'Carta Natal')
+    art = 'tus' if chart_type == 'akashic' else 'tu'
     g = _glossary()
     consulta = (g.get('consulta_final')
                 or "Esta lectura es un resumen; si deseas profundizar, por favor "
                    "solicita tu consulta en nuestra página web.")
-    txt = ("He de dejar aquí el estudio de tu %s, no sin antes recordarte que "
+    txt = ("He de dejar aquí el estudio de " + art + " %s, no sin antes recordarte que "
            "TODOS los signos mencionados aquí han de aparecer en algún momento de "
            "tu vida, con personas que nacieron bajo ellos y que en esta existencia "
            "tienen un compromiso vital contigo. Ninguna de ellas es culpable de lo "
@@ -1594,7 +1735,7 @@ def render_docx(sections, chart_png_bytes, meta,
 _SUBTITLE = {
     'natal': 'de Carta Natal', 'transit': 'de Tránsitos',
     'solar_return': 'de Retorno Solar', 'progressed': 'de Carta Progresada',
-    'combined': 'de Carta Combinada',
+    'combined': 'de Carta Combinada', 'akashic': 'de Registros Akáshicos',
 }
 _CHART_HEADING = {
     'natal': 'Carta natal: el libreto de tu vida',
@@ -1602,6 +1743,7 @@ _CHART_HEADING = {
     'solar_return': 'Tus dos cartas: natal y retorno solar',
     'progressed': 'Tus dos cartas: natal y progresada',
     'combined': 'La carta combinada del vínculo',
+    'akashic': 'Tu carta natal y tu Casa XII',
 }
 _INTRO_TITLE = {
     'transit': 'Qué son los tránsitos',
@@ -1643,13 +1785,21 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
         chart = data['combined']
         base_meta = data.get('a', chart)
         _intro, sections = build_sections(chart, 'combined')
+    elif ct == "akashic":
+        # Registros Akáshicos: estudio de la Casa XII de la carta natal
+        chart = data
+        base_meta = data
+        _ak_pre, sections = build_akashic(chart)
+        _intro = ""
     else:
         ct = "natal"
         chart = data
         base_meta = data
         _intro, sections = build_sections(chart, 'natal')
 
-    if ct in ("natal", "solar_return", "combined", "progressed"):
+    if ct == "akashic":
+        pre_blocks = _ak_pre
+    elif ct in ("natal", "solar_return", "combined", "progressed"):
         # Progresada usa el mismo preámbulo que natal/retorno (Sol, Luna, Asc,
         # cruz y elemento), adaptado.
         pre_blocks = build_preamble(chart, ct)

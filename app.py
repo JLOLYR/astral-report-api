@@ -180,7 +180,8 @@ def make_report(req: ReportRequest):
     La web envía la imagen de la rueda ya compuesta en chart_png."""
     try:
         ct = (req.chart_type or "natal").lower()
-        if ct == "natal":
+        if ct in ("natal", "akashic"):
+            # Registros akáshicos = estudio de la Casa XII de la carta natal
             if not req.natal:
                 raise ValueError("Faltan los datos natales.")
             data = astro.compute_chart(**_bd(req.natal))

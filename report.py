@@ -1715,6 +1715,11 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
     png2 = _png_from_dataurl(chart_png2)
     tsuf = '' if ct == 'natal' else ('_' + ct)
     safe = "Reporte_Astral" + (("_" + person.replace(' ', '_')) if person else "") + tsuf
+    # El nombre del archivo va en una cabecera HTTP (solo ASCII): quita acentos
+    # y cualquier carácter no seguro para no romper la respuesta.
+    import unicodedata as _ud
+    safe = ''.join(ch for ch in _ud.normalize('NFKD', safe) if ord(ch) < 128)
+    safe = ''.join(ch if (ch.isalnum() or ch in ('_', '-')) else '_' for ch in safe) or 'Reporte_Astral'
     if fmt == 'docx':
         out = render_docx(sections, png, meta,
                           pre_blocks=pre_blocks, legend=legend, glossary=glossary,

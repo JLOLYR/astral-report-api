@@ -592,8 +592,7 @@ def render_pdf(sections, chart_png_bytes, meta,
                            textColor=C.HexColor(NAVY), spaceBefore=20, spaceAfter=12,
                            keepWithNext=1, alignment=TA_CENTER)
     st_h3 = ParagraphStyle('h3', fontName=bd, fontSize=13.5, leading=18,
-                           textColor=C.HexColor(BLUE), spaceBefore=14, spaceAfter=7,
-                           keepWithNext=1)
+                           textColor=C.HexColor(BLUE), spaceBefore=12, spaceAfter=6)
     st_body = ParagraphStyle('b', fontName=bf, fontSize=12, leading=18.5,
                              textColor=C.HexColor(INK), alignment=TA_JUSTIFY,
                              spaceAfter=12, firstLineIndent=16)
@@ -677,18 +676,20 @@ def render_pdf(sections, chart_png_bytes, meta,
         p.lineTo(cx - r, cy); p.close()
         cv.drawPath(p, fill=0, stroke=1)
 
+    _redes = _brand().get('redes', [])
+    _web = next((r.get('texto') for r in _redes if r.get('icon') == 'web'),
+                'www.mauriciopuerta.tv')
+
     def _footer_sub():
         _tipo = meta.get('subtitle', 'de Carta Natal')
         if _tipo.lower().startswith('de '):
             _tipo = _tipo[3:]
         parts = [_tipo]
-        if person:
-            parts.append(person)
-        _f = meta.get('date', '')
-        if _f and len(_f.split('-')) == 3:
-            y, m, d = _f.split('-')
-            parts.append('%s-%s-%s' % (d, m, y))
-        return '  ·  ' + '  ·  '.join(parts)
+        if astrologer:
+            parts.append(astrologer)
+        if _web:
+            parts.append(_web)
+        return '   ·   ' + '   ·   '.join(parts)
 
     def on_body(cv, doc):
         cv.saveState()
@@ -880,11 +881,14 @@ def render_pdf(sections, chart_png_bytes, meta,
                 else:
                     content.append(NextPageTemplate('Wheels'))
                     content.append(PageBreak())
-                H2(meta.get('chart_heading', 'Tus dos cartas'))
-                content.append(Spacer(1, 4))
+                # Título compacto (ahorra espacio para que la leyenda entre)
+                st_wh = ParagraphStyle('wh', fontName=bd, fontSize=14, leading=17,
+                                       textColor=C.HexColor(NAVY), alignment=TA_CENTER,
+                                       spaceBefore=0, spaceAfter=4)
+                content.append(Paragraph(esc(meta.get('chart_heading', 'Tus dos cartas')), st_wh))
                 colw = (land_w - lm - rm) / 2.0
                 # Deja sitio para la leyenda en la misma página
-                each = min(colw - 0.5 * cm, 8.7 * cm)
+                each = min(colw - 0.5 * cm, 8.9 * cm)
                 st_wcap = ParagraphStyle('wcap', fontName=bd, fontSize=12, leading=15,
                                          textColor=C.HexColor(BLUE), alignment=TA_CENTER,
                                          spaceAfter=5)
@@ -908,17 +912,24 @@ def render_pdf(sections, chart_png_bytes, meta,
             else:
                 im = PILImage.open(io.BytesIO(chart_png_bytes))
                 iw, ih = im.size
-                disp_w = min(page_w - lm - rm, 15 * cm)
+                # Se reduce lo justo para que la leyenda entre en la MISMA página
+                disp_w = min(page_w - lm - rm, 13.2 * cm)
                 disp_h = disp_w * ih / iw
+                max_h = 14.2 * cm
+                if disp_h > max_h:
+                    disp_h = max_h; disp_w = disp_h * iw / ih
                 H2(meta.get('chart_heading', 'Carta natal: el libreto de tu vida'))
-                content.append(Spacer(1, 6))
-                content.append(Image(io.BytesIO(chart_png_bytes), width=disp_w, height=disp_h))
-                content.append(PageBreak())   # la rueda ocupa su propia página
+                content.append(Spacer(1, 4))
+                img_tbl = Table([[Image(io.BytesIO(chart_png_bytes), width=disp_w, height=disp_h)]],
+                                colWidths=[page_w - lm - rm])
+                img_tbl.setStyle(TableStyle([('ALIGN', (0, 0), (-1, -1), 'CENTER')]))
+                content.append(img_tbl)
+                content.append(Spacer(1, 4))
         except Exception:
             pass
 
     if legend and not legend_done[0]:
-        add_legend()
+        add_legend(ncols=6, fs=8.5, ic_sz=9)
         content.append(Spacer(1, 18))
 
     for sec_title, items in sections:
@@ -961,12 +972,19 @@ def render_pdf(sections, chart_png_bytes, meta,
         try:
             from PIL import Image as PILImage2
             iw, ih = PILImage2.open(info_img).size
-            w = page_w; h = w * ih / iw
-            if h > page_h:
-                h = page_h; w = h * iw / ih
+            side = 1.1 * cm          # margen blanco lateral pequeño
+            w = page_w - 2 * side; h = w * ih / iw
+            if h > page_h - 2 * side:
+                h = page_h - 2 * side; w = h * iw / ih
             content.append(NextPageTemplate('Plate'))
             content.append(PageBreak())
-            content.append(Image(info_img, width=w, height=h))
+            itbl = Table([[Image(info_img, width=w, height=h)]], colWidths=[page_w])
+            itbl.setStyle(TableStyle([('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                                      ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                                      ('TOPPADDING', (0, 0), (-1, -1), int(side)),
+                                      ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                                      ('RIGHTPADDING', (0, 0), (-1, -1), 0)]))
+            content.append(itbl)
             content.append(NextPageTemplate('Body'))
         except Exception:
             pass

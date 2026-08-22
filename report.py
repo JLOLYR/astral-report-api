@@ -801,7 +801,8 @@ def render_pdf(sections, chart_png_bytes, meta,
                            textColor=C.HexColor(NAVY), spaceBefore=20, spaceAfter=12,
                            keepWithNext=1, alignment=TA_CENTER)
     st_h3 = ParagraphStyle('h3', fontName=bd, fontSize=13.5, leading=18,
-                           textColor=C.HexColor(BLUE), spaceBefore=12, spaceAfter=6)
+                           textColor=C.HexColor(BLUE), spaceBefore=12, spaceAfter=6,
+                           keepWithNext=1)
     st_body = ParagraphStyle('b', fontName=bf, fontSize=12, leading=18.5,
                              textColor=C.HexColor(INK), alignment=TA_JUSTIFY,
                              spaceAfter=12, firstLineIndent=16)
@@ -1070,31 +1071,6 @@ def render_pdf(sections, chart_png_bytes, meta,
         ]))
         content.append(t)
 
-    if pre_blocks:
-        mand_buf = []
-        for blk in pre_blocks:
-            if blk[0] == "mand":
-                mand_buf.append((blk[1], blk[2], blk[3]))
-                continue
-            if mand_buf:
-                flush_mand(mand_buf); mand_buf = []
-                content.append(Spacer(1, 8))
-            if blk[0] == "h2":
-                H2(blk[1])
-            elif blk[0] == "h3":
-                H3(blk[1])
-            elif blk[0] == "p":
-                content.append(Paragraph(with_icons(blk[1], 12), st_body))
-            elif blk[0] == "item":
-                _, nm, tx, hl = blk
-                nm_markup = with_icons(nm, 12)
-                nm_markup = ('<font color="%s"><b>%s</b></font>' % (RED, nm_markup)) if hl \
-                    else ('<b>%s</b>' % nm_markup)
-                content.append(Paragraph(nm_markup + ' — ' + esc(tx), st_item))
-        if mand_buf:
-            flush_mand(mand_buf); mand_buf = []
-        content.append(PageBreak())
-
     legend_done = [False]
 
     def add_legend(ncols=4, total_w=None, fs=9, ic_sz=10):
@@ -1132,15 +1108,8 @@ def render_pdf(sections, chart_png_bytes, meta,
             from PIL import Image as PILImage
             caps = meta.get('img_captions')
             if chart_png2_bytes and caps:
-                # Ambas ruedas en UNA página apaisada, lado a lado, grandes,
-                # para poder compararlas.
-                # Evita una página en blanco si ya venía un salto de página
-                if content and isinstance(content[-1], PageBreak):
-                    content.insert(len(content) - 1, NextPageTemplate('Wheels'))
-                else:
-                    content.append(NextPageTemplate('Wheels'))
-                    content.append(PageBreak())
-                # Título compacto (ahorra espacio para que la leyenda entre)
+                # Ambas ruedas en UNA página apaisada (la orientación la fija
+                # el flujo, justo tras el índice). Título compacto (ahorra espacio para que la leyenda entre)
                 st_wh = ParagraphStyle('wh', fontName=bd, fontSize=14, leading=17,
                                        textColor=C.HexColor(NAVY), alignment=TA_CENTER,
                                        spaceBefore=0, spaceAfter=4)
@@ -1191,6 +1160,30 @@ def render_pdf(sections, chart_png_bytes, meta,
         add_legend(ncols=6, fs=8.5, ic_sz=9)
         content.append(PageBreak())   # la carta + leyenda quedan solas en su página
 
+    if pre_blocks:
+        mand_buf = []
+        for blk in pre_blocks:
+            if blk[0] == "mand":
+                mand_buf.append((blk[1], blk[2], blk[3]))
+                continue
+            if mand_buf:
+                flush_mand(mand_buf); mand_buf = []
+                content.append(Spacer(1, 8))
+            if blk[0] == "h2":
+                H2(blk[1])
+            elif blk[0] == "h3":
+                H3(blk[1])
+            elif blk[0] == "p":
+                content.append(Paragraph(with_icons(blk[1], 12), st_body))
+            elif blk[0] == "item":
+                _, nm, tx, hl = blk
+                nm_markup = with_icons(nm, 12)
+                nm_markup = ('<font color="%s"><b>%s</b></font>' % (RED, nm_markup)) if hl \
+                    else ('<b>%s</b>' % nm_markup)
+                content.append(Paragraph(nm_markup + ' — ' + esc(tx), st_item))
+        if mand_buf:
+            flush_mand(mand_buf); mand_buf = []
+
     for sec_title, items in sections:
         H2(sec_title)
         for it_title, paras in items:
@@ -1225,24 +1218,27 @@ def render_pdf(sections, chart_png_bytes, meta,
             elif blk[0] == "pc":
                 content.append(Paragraph(esc(blk[1]), st_close))
 
-    # ── Antepenúltima: página de información (rueda educativa) ────────────
+    # ── Antepenúltima: página de información (rueda educativa cuadrada) ───
     info_img = _info_path()
     if info_img:
         try:
             from PIL import Image as PILImage2
             iw, ih = PILImage2.open(info_img).size
-            side = 1.1 * cm          # margen blanco lateral pequeño
+            side = 1.35 * cm
             w = page_w - 2 * side; h = w * ih / iw
             if h > page_h - 2 * side:
                 h = page_h - 2 * side; w = h * iw / ih
             content.append(NextPageTemplate('Plate'))
             content.append(PageBreak())
+            # Centrado vertical (la imagen cuadrada deja aire arriba y abajo)
+            top = max(0, (page_h - h) / 2.0 - 6)
+            content.append(Spacer(1, top))
             itbl = Table([[Image(info_img, width=w, height=h)]], colWidths=[page_w])
             itbl.setStyle(TableStyle([('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                                      ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                                      ('TOPPADDING', (0, 0), (-1, -1), int(side)),
                                       ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                                      ('RIGHTPADDING', (0, 0), (-1, -1), 0)]))
+                                      ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                                      ('TOPPADDING', (0, 0), (-1, -1), 0),
+                                      ('BOTTOMPADDING', (0, 0), (-1, -1), 0)]))
             content.append(itbl)
             content.append(NextPageTemplate('Body'))
         except Exception:
@@ -1250,11 +1246,12 @@ def render_pdf(sections, chart_png_bytes, meta,
 
     # ── Penúltima: aviso legal y de privacidad ───────────────────────────
     content.append(PageBreak())
-    st_dl_h = ParagraphStyle('dlh', fontName=bd, fontSize=12.5, leading=16,
-                             textColor=C.HexColor(NAVY), spaceBefore=12, spaceAfter=4)
-    st_dl_p = ParagraphStyle('dlp', fontName=bf, fontSize=10.5, leading=16,
-                             textColor=C.HexColor(INK), alignment=TA_JUSTIFY, spaceAfter=8)
+    st_dl_h = ParagraphStyle('dlh', fontName=bd, fontSize=14.5, leading=19,
+                             textColor=C.HexColor(NAVY), spaceBefore=18, spaceAfter=6)
+    st_dl_p = ParagraphStyle('dlp', fontName=bf, fontSize=12.5, leading=20,
+                             textColor=C.HexColor(INK), alignment=TA_JUSTIFY, spaceAfter=16)
     H2("Aviso legal y de privacidad")
+    content.append(Spacer(1, 10))
     for htitle, ptext in _DISCLAIMER:
         content.append(Paragraph(esc(htitle), st_dl_h))
         content.append(Paragraph(esc(ptext), st_dl_p))
@@ -1380,6 +1377,10 @@ def render_pdf(sections, chart_png_bytes, meta,
 
     flow.append(Paragraph('Índice de contenidos', st_h2))
     flow.append(toc)
+    # La carta va JUSTO después del índice. Si son dos ruedas, la primera
+    # página del contenido debe ser apaisada (fija la orientación antes del salto).
+    if chart_png2_bytes and meta.get('img_captions'):
+        flow.append(NextPageTemplate('Wheels'))
     flow.append(PageBreak())
     flow += content
     doc.multiBuild(flow)

@@ -1003,8 +1003,9 @@ def render_pdf(sections, chart_png_bytes, meta,
         def afterFlowable(self, f):
             key = getattr(f, '_tocKey', None)
             if key:
-                lvl = 0 if f.style.name == 'h2' else 1
-                self.notify('TOCEntry', (lvl, f.getPlainText(), self.page, key))
+                lvl = getattr(f, '_tocLevel', 0 if f.style.name == 'h2' else 1)
+                txt = getattr(f, '_tocText', None) or f.getPlainText()
+                self.notify('TOCEntry', (lvl, txt, self.page, key))
 
     frame = Frame(lm, bm, page_w - lm - rm, page_h - tm - bm)
     frame_land = Frame(lm, bm, land_w - lm - rm, land_h - tm * 0.7 - bm)
@@ -1184,12 +1185,28 @@ def render_pdf(sections, chart_png_bytes, meta,
         if mand_buf:
             flush_mand(mand_buf); mand_buf = []
 
+    # Título de interpretación fusionado con el inicio de su texto: así el
+    # título nunca queda solo al pie y el párrafo se parte con naturalidad,
+    # sin dejar huecos grandes.
+    st_ihead = ParagraphStyle('ihead', fontName=bf, fontSize=12, leading=18.5,
+                              textColor=C.HexColor(INK), alignment=TA_JUSTIFY,
+                              spaceBefore=13, spaceAfter=6, firstLineIndent=0)
+
+    def emit_item(title, paras):
+        key = "sec%d" % nkey[0]; nkey[0] += 1
+        head = ('<a name="%s"/><font size="13" color="%s"><b>%s</b></font>'
+                % (key, BLUE, with_icons(title, 14)))
+        first = with_icons(paras[0], 12) if paras else ''
+        p = Paragraph(head + '<br/><br/>' + first, st_ihead)
+        p._tocKey = key; p._tocText = title; p._tocLevel = 1
+        content.append(p)
+        for extra in paras[1:]:
+            content.append(Paragraph(with_icons(extra, 12), st_body))
+
     for sec_title, items in sections:
         H2(sec_title)
         for it_title, paras in items:
-            H3(it_title)
-            for p in paras:
-                content.append(Paragraph(with_icons(p, 12), st_body))
+            emit_item(it_title, paras)
 
     if glossary:
         content.append(Spacer(1, 20))

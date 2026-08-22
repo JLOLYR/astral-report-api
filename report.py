@@ -673,7 +673,12 @@ def _glyph_maps():
 
 
 def _glyph_tag(glyph, color):
-    return ('<font name="AstroGlyph" color="%s">%s</font>&nbsp;&nbsp;' % (color, glyph))
+    # Usa el nombre de fuente REALMENTE registrado (evita romper si falta el TTF
+    # de glifos en el servidor). Si no hay fuente de glifos, omite el glifo.
+    fn = _rc.GLYPHF() if _rc is not None else None
+    if not fn or fn == 'Helvetica':
+        return ''
+    return ('<font name="%s" color="%s">%s</font>&#160;&#160;' % (fn, color, glyph))
 
 
 def build_glossary():

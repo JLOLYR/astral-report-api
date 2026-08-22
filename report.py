@@ -23,6 +23,11 @@ from datetime import date as _date
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
 
+try:
+    import report_chart as _rc          # lámina estética de carta (solo reportes)
+except Exception:
+    _rc = None
+
 GOLD = '#C9A24B'
 NAVY = '#1E2450'
 BLUE = '#3A4488'
@@ -647,23 +652,57 @@ def build_preamble(chart, chart_type='natal'):
 
 # ── Glosario ────────────────────────────────────────────────────────────
 
+def _glyph_maps():
+    """Mapas nombre→(glifo, color) para signos y planetas, desde report_chart."""
+    import unicodedata
+
+    def nk(s):
+        return ''.join(c for c in unicodedata.normalize('NFKD', (s or '').lower())
+                       if c.isalnum())
+    sgn, pln = {}, {}
+    if _rc is not None:
+        for i, nm in enumerate(_rc.SIGN_NAME):
+            sgn[nk(nm)] = (_rc.SIGN_GLYPH[i], _rc.SIGN_COL[i])
+        for key, (gl, col, nm) in _rc.PLANETS.items():
+            pln[nk(nm)] = (gl, col)
+        # variantes de nombre que puede traer el glosario
+        pln[nk('R. Fortuna')] = _rc.PLANETS['aRuedaFortuna'][:2]
+        pln[nk('Rueda de la Fortuna')] = _rc.PLANETS['aRuedaFortuna'][:2]
+        pln[nk('Lilith')] = _rc.PLANETS['aLunaNegra'][:2]
+    return sgn, pln
+
+
+def _glyph_tag(glyph, color):
+    return ('<font name="AstroGlyph" color="%s">%s</font>&nbsp;&nbsp;' % (color, glyph))
+
+
 def build_glossary():
     g = _glossary()
     if not g:
         return []
+    sgn, pln = _glyph_maps()
+    import unicodedata
+
+    def nk(s):
+        return ''.join(c for c in unicodedata.normalize('NFKD', (s or '').lower())
+                       if c.isalnum())
     b = [("h2", "Glosario")]
     b.append(("h3", "Signos zodiacales"))
     if g.get('signos_intro'):
         b.append(("p", g['signos_intro']))
     for s in g.get('signos', []):
+        gc = sgn.get(nk(s['nombre']))
+        pre = _glyph_tag(*gc) if gc else ''
         b.append(("item", s['nombre'],
                   "%s · %s. %s" % (s.get('lema', ''), s.get('elemento', ''), s.get('desc', '')),
-                  False))
+                  False, pre))
     b.append(("h3", "Luminarias y planetas"))
     if g.get('planetas_intro'):
         b.append(("p", g['planetas_intro']))
     for s in g.get('planetas', []):
-        b.append(("item", s['nombre'], s.get('desc', ''), False))
+        gc = pln.get(nk(s['nombre']))
+        pre = _glyph_tag(*gc) if gc else ''
+        b.append(("item", s['nombre'], s.get('desc', ''), False, pre))
     b.append(("h3", "Casas astrales"))
     if g.get('casas_intro'):
         b.append(("p", g['casas_intro']))
@@ -776,6 +815,20 @@ def render_pdf(sections, chart_png_bytes, meta,
     bf, bd, it = 'Helvetica', 'Helvetica-Bold', 'Helvetica-Oblique'
     # Serif elegante para la portada (siempre disponible en PDF)
     sf, sb, si = 'Times-Roman', 'Times-Bold', 'Times-Italic'
+    # Serif elegante para los TÍTULOS del reporte (Cormorant si está; si no, Times)
+    if _rc is not None:
+        try:
+            _rc._reg()   # registra AstroGlyph (glifos) y Cormorant/Times
+        except Exception:
+            pass
+    hser = 'Times-Bold'; hser_i = 'Times-Italic'
+    if _rc is not None:
+        _s = _rc.SERIF_SB()
+        if _s and _s != 'Times-Roman':
+            hser = _s
+        _si = _rc.SERIF_I()
+        if _si:
+            hser_i = _si
 
     person = meta.get('name') or ''
     astrologer = meta.get('astrologer') or _brand().get('astrologo_default', '')
@@ -797,10 +850,10 @@ def render_pdf(sections, chart_png_bytes, meta,
 
     # Estilos (capítulos centrados)
     # Tipografía más grande y aireada (lectores adultos mayores)
-    st_h2 = ParagraphStyle('h2', fontName=bd, fontSize=17.5, leading=23,
+    st_h2 = ParagraphStyle('h2', fontName=hser, fontSize=21, leading=26,
                            textColor=C.HexColor(NAVY), spaceBefore=20, spaceAfter=12,
                            keepWithNext=1, alignment=TA_CENTER)
-    st_h3 = ParagraphStyle('h3', fontName=bd, fontSize=13.5, leading=18,
+    st_h3 = ParagraphStyle('h3', fontName=hser, fontSize=16, leading=20,
                            textColor=C.HexColor(BLUE), spaceBefore=12, spaceAfter=6,
                            keepWithNext=1)
     st_body = ParagraphStyle('b', fontName=bf, fontSize=12, leading=18.5,
@@ -948,18 +1001,37 @@ def render_pdf(sections, chart_png_bytes, meta,
         cv.setFont(bf, 8); cv.drawString(x0, y, left)
         cv.setFont(it, 8); cv.drawString(x0 + w1, y, right)
 
+    def _draw_footer(cv, wpage, doc):
+        """Pie: línea, marca · tipo · web y número de página (en rombo)."""
+        cv.saveState()
+        cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.7)
+        cv.line(lm, bm * 0.72, wpage - rm, bm * 0.72)
+        marca = 'REPORTE ASTRAL'
+        cv.setFont(bf, 7.5); cv.setFillColor(C.HexColor(NAVY))
+        cv.drawString(lm, bm * 0.42, marca)
+        cv.setFont(it, 7.5); cv.setFillColor(C.HexColor(SLATE))
+        cv.drawString(lm + cv.stringWidth(marca, bf, 7.5), bm * 0.42, _footer_sub())
+        cx2 = wpage - rm - 8; cy2 = bm * 0.46
+        cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.7)
+        _diamond(cv, cx2, cy2, 8.5)
+        cv.setFont(bf, 7.5); cv.setFillColor(C.HexColor(NAVY))
+        cv.drawCentredString(cx2, cy2 - 2.6, str(doc.page))
+        cv.restoreState()
+
     def on_body(cv, doc):
         cv.saveState()
         cv.setFillColor(C.HexColor(PAPER_BG)); cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
         _draw_header(cv, page_w)
         ty = page_h - tm * 0.62
-        cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.6)
-        cv.line(page_w / 2 - 90, ty, page_w / 2 - 14, ty)
-        cv.line(page_w / 2 + 14, ty, page_w / 2 + 90, ty)
-        cv.setLineWidth(0.7)
-        _diamond(cv, page_w / 2, ty, 4.5)
-        cv.setFillColor(C.HexColor(GOLD))
-        cv.circle(page_w / 2, ty, 1.0, fill=1, stroke=0)
+        # Divisor al estilo de las nuevas cartas: línea dorada + rombo relleno
+        cx_ = page_w / 2
+        cv.setStrokeColor(C.HexColor(GOLD)); cv.setLineWidth(0.7)
+        cv.line(cx_ - 94, ty, cx_ - 8, ty)
+        cv.line(cx_ + 8, ty, cx_ + 94, ty)
+        pd = cv.beginPath()
+        pd.moveTo(cx_, ty + 3.4); pd.lineTo(cx_ + 3.4, ty)
+        pd.lineTo(cx_, ty - 3.4); pd.lineTo(cx_ - 3.4, ty); pd.close()
+        cv.setFillColor(C.HexColor(GOLD)); cv.drawPath(pd, fill=1, stroke=0)
         cv.setLineWidth(0.7)
         cv.line(lm, bm * 0.72, page_w - rm, bm * 0.72)
         cv.setFont(bf, 7.5); cv.setFillColor(C.HexColor(NAVY))
@@ -1003,8 +1075,12 @@ def render_pdf(sections, chart_png_bytes, meta,
         def afterFlowable(self, f):
             key = getattr(f, '_tocKey', None)
             if key:
-                lvl = getattr(f, '_tocLevel', 0 if f.style.name == 'h2' else 1)
-                txt = getattr(f, '_tocText', None) or f.getPlainText()
+                lvl = getattr(f, '_tocLevel', None)
+                if lvl is None:
+                    lvl = 0 if getattr(getattr(f, 'style', None), 'name', '') == 'h2' else 1
+                txt = getattr(f, '_tocText', None)
+                if not txt:
+                    txt = f.getPlainText() if hasattr(f, 'getPlainText') else ''
                 self.notify('TOCEntry', (lvl, txt, self.page, key))
 
     frame = Frame(lm, bm, page_w - lm - rm, page_h - tm - bm)
@@ -1018,6 +1094,43 @@ def render_pdf(sections, chart_png_bytes, meta,
         cv.rect(0, 0, page_w, page_h, fill=1, stroke=0)
         cv.restoreState()
 
+    # ── Lámina estética de carta (nueva) + página de leyenda ──────────────
+    use_lamina = bool(_rc is not None and meta.get('lamina_chart') is not None)
+
+    def on_lamina_chart(cv, doc):
+        try:
+            _rc.draw_lamina(cv, page_w, page_h, meta.get('chart_type', 'natal'),
+                            meta, meta['lamina_chart'])
+        except Exception:
+            cv.saveState(); cv.setFillColor(C.HexColor('#FFFFFF'))
+            cv.rect(0, 0, page_w, page_h, fill=1, stroke=0); cv.restoreState()
+        if meta.get('_key_chart'):
+            cv.bookmarkPage(meta['_key_chart'])
+        _draw_footer(cv, page_w, doc)
+
+    def on_lamina_legend(cv, doc):
+        try:
+            _rc.draw_legend(cv, page_w, page_h)
+        except Exception:
+            cv.saveState(); cv.setFillColor(C.HexColor('#FFFFFF'))
+            cv.rect(0, 0, page_w, page_h, fill=1, stroke=0); cv.restoreState()
+        if meta.get('_key_legend'):
+            cv.bookmarkPage(meta['_key_legend'])
+        _draw_footer(cv, page_w, doc)
+
+    def on_lamina_dual(cv, doc):
+        try:
+            caps = meta.get('dual_captions') or ['Carta natal', '']
+            _rc.draw_dual_wheels(cv, land_w, land_h, meta,
+                                 meta.get('lamina_natal'), meta.get('lamina_chart'),
+                                 caps[0], caps[1] if len(caps) > 1 else '')
+        except Exception:
+            cv.saveState(); cv.setFillColor(C.HexColor('#FFFFFF'))
+            cv.rect(0, 0, land_w, land_h, fill=1, stroke=0); cv.restoreState()
+        if meta.get('_key_dual'):
+            cv.bookmarkPage(meta['_key_dual'])
+        _draw_footer(cv, land_w, doc)
+
     doc = _Doc(buf, pagesize=A4, leftMargin=lm, rightMargin=rm,
                topMargin=tm, bottomMargin=bm)
     doc.addPageTemplates([
@@ -1025,6 +1138,13 @@ def render_pdf(sections, chart_png_bytes, meta,
         PageTemplate(id='Body', frames=[frame], onPage=on_body),
         PageTemplate(id='Wheels', frames=[frame_land], onPage=on_wheels, pagesize=landscape(A4)),
         PageTemplate(id='Plate', frames=[frame_full], onPage=on_plate),
+        PageTemplate(id='LaminaChart', frames=[Frame(0, 0, page_w, page_h, leftPadding=0,
+                     rightPadding=0, topPadding=0, bottomPadding=0)], onPage=on_lamina_chart),
+        PageTemplate(id='LaminaLegend', frames=[Frame(0, 0, page_w, page_h, leftPadding=0,
+                     rightPadding=0, topPadding=0, bottomPadding=0)], onPage=on_lamina_legend),
+        PageTemplate(id='LaminaDual', frames=[Frame(0, 0, land_w, land_h, leftPadding=0,
+                     rightPadding=0, topPadding=0, bottomPadding=0)], onPage=on_lamina_dual,
+                     pagesize=landscape(A4)),
     ])
 
     nkey = [0]
@@ -1104,7 +1224,38 @@ def render_pdf(sections, chart_png_bytes, meta,
             ]))
             content.append(t)
 
-    if chart_png_bytes:
+    if use_lamina:
+        # Lámina estética (rueda + datos), luego —para retorno/progresada— una
+        # página apaisada con las dos ruedas, y por último la leyenda. Cada una
+        # se registra en el índice mediante un Spacer marcador + bookmark.
+        meta['_key_chart'] = 'lam_chart'
+        meta['_key_dual'] = 'lam_dual'
+        meta['_key_legend'] = 'lam_legend'
+
+        sp = Spacer(1, 2)
+        sp._tocKey = meta['_key_chart']
+        sp._tocText = meta.get('lamina_toc') or meta.get('chart_heading', 'Carta natal')
+        sp._tocLevel = 0
+        content.append(sp)                                 # ocupa la página LaminaChart
+        if meta.get('lamina_natal') is not None:
+            content.append(NextPageTemplate('LaminaDual'))
+            content.append(PageBreak())
+            sp2 = Spacer(1, 2)
+            sp2._tocKey = meta['_key_dual']
+            sp2._tocText = meta.get('dual_title', 'Las dos cartas')
+            sp2._tocLevel = 1
+            content.append(sp2)                            # ocupa la página doble apaisada
+        content.append(NextPageTemplate('LaminaLegend'))
+        content.append(PageBreak())
+        sp3 = Spacer(1, 2)
+        sp3._tocKey = meta['_key_legend']
+        sp3._tocText = 'Leyenda de símbolos'
+        sp3._tocLevel = 0
+        content.append(sp3)                                # ocupa la página de leyenda
+        content.append(NextPageTemplate('Body'))
+        content.append(PageBreak())
+        legend_done[0] = True
+    elif chart_png_bytes:
         try:
             from PIL import Image as PILImage
             caps = meta.get('img_captions')
@@ -1218,8 +1369,10 @@ def render_pdf(sections, chart_png_bytes, meta,
             elif blk[0] == "p":
                 content.append(Paragraph(with_icons(blk[1], 12), st_body))
             elif blk[0] == "item":
-                _, nm, tx, _hl = blk
-                content.append(Paragraph('<b>%s</b> — %s' % (with_icons(nm, 12), esc(tx)),
+                nm = blk[1]; tx = blk[2]
+                pre = blk[4] if len(blk) > 4 else ''
+                nm_m = esc(nm) if pre else with_icons(nm, 12)
+                content.append(Paragraph(pre + '<b>%s</b> — %s' % (nm_m, esc(tx)),
                                          st_item))
 
     # ── Cierre / palabras finales ────────────────────────────────────────
@@ -1394,9 +1547,12 @@ def render_pdf(sections, chart_png_bytes, meta,
 
     flow.append(Paragraph('Índice de contenidos', st_h2))
     flow.append(toc)
-    # La carta va JUSTO después del índice. Si son dos ruedas, la primera
-    # página del contenido debe ser apaisada (fija la orientación antes del salto).
-    if chart_png2_bytes and meta.get('img_captions'):
+    # La carta va JUSTO después del índice.
+    if use_lamina:
+        # Lámina estética a página completa (portrait), no apaisada.
+        flow.append(NextPageTemplate('LaminaChart'))
+    elif chart_png2_bytes and meta.get('img_captions'):
+        # (modo antiguo) dos ruedas → primera página apaisada.
         flow.append(NextPageTemplate('Wheels'))
     flow.append(PageBreak())
     flow += content
@@ -1878,6 +2034,95 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
             'date': bi.get('date', ''), 'time': bi.get('time', ''),
             'city': (city_b or '').strip(),
         }
+
+    # ── Datos para la lámina estética (nueva carta del reporte) ───────────
+    if ct in ('natal', 'akashic', 'solar_return', 'progressed', 'combined'):
+        meta['lamina_chart'] = chart
+        _toc_lbl = {'natal': 'Carta natal', 'akashic': 'Registros akáshicos',
+                    'solar_return': 'Retorno solar' + ((' %s' % data['year'])
+                                                       if data.get('year') else ''),
+                    'progressed': 'Carta progresada', 'combined': 'Carta combinada'}
+        meta['lamina_toc'] = _toc_lbl.get(ct, 'Carta')
+
+        def _coords(inp):
+            try:
+                return "%.2f°, %.2f°" % (float(inp.get('lat')), float(inp.get('lon')))
+            except Exception:
+                return ''
+
+        def _clean(rows):
+            return [(ic, t) for ic, t in rows if t]
+
+        _SG = _rc.SIGN_NAME if _rc else ['']*12
+
+        def _asc_row(chart_dict):
+            a = chart_dict.get('angles', {}).get('asc', {}).get('lon')
+            if a is None:
+                return None
+            return ('up', 'Asc %s %d°' % (_SG[int(a // 30) % 12], int(a % 30)))
+
+        if ct in ('natal', 'akashic'):
+            n_in = base_meta.get('input', {})
+            rows = _clean([('cal', fecha_es(n_in.get('date', meta.get('date', '')))),
+                           ('clock', n_in.get('time', '')), ('pin', (city or '').strip())])
+            ar = _asc_row(chart)
+            if ar:
+                rows.append(ar)
+            co = _coords(n_in)
+            if co:
+                rows.append(('globe', co))
+            meta['boxes'] = [{'title': 'Nacimiento', 'rows': rows}]
+        elif ct == 'solar_return':
+            n_in = data.get('natal', {}).get('input', {})
+            box1 = _clean([('cal', fecha_es(n_in.get('date', ''))),
+                           ('clock', n_in.get('time', '')), ('pin', (city or '').strip())])
+            rl = meta.get('return_moment', '')
+            r2 = []
+            if rl:
+                parts = rl.split(',')
+                r2.append(('cal', parts[0].strip()))
+                if len(parts) > 1:
+                    r2.append(('clock', parts[1].strip()))
+            rplace = (meta.get('return_place') or city or '').strip()
+            if rplace:
+                r2.append(('pin', rplace))
+            meta['boxes'] = [{'title': 'Nacimiento', 'rows': box1},
+                             {'title': 'Retorno solar exacto', 'rows': _clean(r2)}]
+            meta['lamina_natal'] = data.get('natal')
+            _yr = data.get('year')
+            meta['dual_captions'] = ['Carta natal',
+                                     'Retorno solar' + ((' %s' % _yr) if _yr else '')]
+            meta['dual_title'] = 'Tus dos cartas: natal y retorno solar'
+            meta['dual_subs'] = [' · '.join(t for _, t in box1),
+                                 ' · '.join(t for _, t in _clean(r2))]
+        elif ct == 'progressed':
+            n_in = data.get('natal', {}).get('input', {})
+            box1 = _clean([('cal', fecha_es(n_in.get('date', ''))),
+                           ('clock', n_in.get('time', '')), ('pin', (city or '').strip())])
+            p_in = data.get('progressed', {}).get('input', {})
+            import re as _re
+            lbl = p_in.get('label') or ''
+            m = _re.search(r'(\d{4}-\d{2}-\d{2})', lbl)
+            r2 = [('cal', fecha_es(m.group(1)))] if m else [('up', lbl or 'Carta progresada')]
+            meta['boxes'] = [{'title': 'Nacimiento', 'rows': box1},
+                             {'title': 'Progresión', 'rows': _clean(r2)}]
+            meta['lamina_natal'] = data.get('natal')
+            meta['dual_captions'] = ['Carta natal', 'Carta progresada']
+            meta['dual_title'] = 'Tus dos cartas: natal y progresada'
+            meta['dual_subs'] = [' · '.join(t for _, t in box1),
+                                 ' · '.join(t for _, t in _clean(r2))]
+        elif ct == 'combined':
+            a_in = data.get('a', {}).get('input', {})
+            b_in = data.get('b', {}).get('input', {})
+            pb = meta.get('person_b', {})
+            nA = person or 'Persona 1'
+            nB = (pb.get('name') or 'Persona 2')
+            box1 = _clean([('cal', fecha_es(a_in.get('date', ''))),
+                           ('clock', a_in.get('time', '')), ('pin', (city or '').strip())])
+            box2 = _clean([('cal', fecha_es(b_in.get('date', ''))),
+                           ('clock', b_in.get('time', '')), ('pin', (pb.get('city') or '').strip())])
+            meta['boxes'] = [{'title': nA, 'rows': box1}, {'title': nB, 'rows': box2}]
+            meta['lamina_name'] = nA + '  +  ' + nB
 
     png = _png_from_dataurl(chart_png)
     png2 = _png_from_dataurl(chart_png2)

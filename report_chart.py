@@ -132,21 +132,23 @@ def spread(lons, min_sep=10.0):
     return out
 
 
-# Glifo antiguo de Plutón (copa con círculo sobre la cruz), vectorial.
+# Glifo de Plutón según el SVG del usuario (círculo en copa sobre la cruz).
+# Geometría original (viewBox centrado, y hacia abajo):
+#   círculo  centro (0,-9.771) r 9.313
+#   copa     semicírculo inferior r 13.938 centrado en (0,-9.771)  → abre arriba
+#   tallo    (0,4.167)–(0,19.083)      barra (-7.089,11.625)–(7.536,11.625)
+# Alto natural ≈ 38.16 u. Aquí y va hacia ARRIBA (reportlab), por eso se niega.
 def _draw_pluto(c, x, y, px, col):
-    u = px/24.0
+    u = px/38.16
     c.saveState(); c.setStrokeColor(col); c.setFillColor(col)
-    c.setLineWidth(max(0.6, 1.5*u))
-    # cruz (tallo + barra) en la mitad inferior
-    c.line(x, y-11*u, x, y-2.5*u)
-    c.line(x-4.5*u, y-6.8*u, x+4.5*u, y-6.8*u)
-    # copa (semicírculo que abre hacia arriba)
-    p = c.beginPath(); r = 6.2*u; cyp = y-1.5*u
-    p.moveTo(x-r, cyp)
-    p.curveTo(x-r, cyp-r*1.05, x+r, cyp-r*1.05, x+r, cyp)
-    c.drawPath(p, stroke=1, fill=0)
-    # círculo dentro de la copa
-    c.circle(x, y+4.4*u, 3.1*u, stroke=1, fill=0)
+    c.setLineWidth(max(0.7, 1.8*u))
+    cyc = y + 9.771*u                     # centro del círculo/copa
+    R = 13.938*u                          # radio de la copa
+    rC = 9.313*u                          # radio del círculo
+    c.arc(x-R, cyc-R, x+R, cyc+R, 180, 180)   # copa: semicírculo inferior
+    c.circle(x, cyc, rC, stroke=1, fill=0)    # círculo
+    c.line(x, y-4.167*u, x, y-19.083*u)       # tallo
+    c.line(x-7.089*u, y-11.625*u, x+7.536*u, y-11.625*u)  # barra
     c.restoreState()
 
 
@@ -255,7 +257,7 @@ def draw_wheel(c, data, ox, oy, size, center_art='sun', aspect_lines=True,
     # planetas
     plist = data['planets']
     lons = [p['lon'] for p in plist]
-    shown = spread(lons, 10.0)
+    shown = spread(lons, 6.5)   # más compacto (stellium tipo AstroGold)
     # líneas de aspecto (sobre el aro 150), en longitud real
     if aspect_lines:
         pos = {p['key']: p['lon'] for p in plist}
@@ -273,7 +275,7 @@ def draw_wheel(c, data, ox, oy, size, center_art='sun', aspect_lines=True,
         xr, yr = pt(real, 356)
         c.setFillColor(col); c.circle(xr, yr, 3*sc, stroke=0, fill=1)
         if p['key'] == 'aPluton':
-            gx, gy = pt(a, 320); _draw_pluto(c, gx, gy, 34*sc, col)
+            gx, gy = pt(a, 320); _draw_pluto(c, gx, gy, 27*sc, col)
         else:
             gtext(a, 320, gl, col, 36)
         # grado / signo / minutos
@@ -582,7 +584,7 @@ def draw_legend(c, page_w, page_h):
             r = i//cols; cc = i % cols
             gx = left + cc*colw; gy = yy - r*rowh
             if glyph == '♇':
-                _draw_pluto(c, gx+13, gy-2, 19, _hx(gcol))
+                _draw_pluto(c, gx+13, gy-4, 17, _hx(gcol))
             else:
                 c.setFont(GLYPHF(), 20); c.setFillColor(_hx(gcol))
                 c.drawCentredString(gx+13, gy-7, glyph)

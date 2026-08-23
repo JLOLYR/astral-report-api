@@ -357,8 +357,9 @@ def compute_solar_return(natal, year, reloc=None):
     return {'natal': base, 'solar_return': sr, 'year': int(year)}
 
 
-def compute_progressed(natal, target_date):
-    """Progresión secundaria: 1 día tras el nacimiento = 1 año de vida."""
+def compute_progressed(natal, target_date, reloc=None):
+    """Progresión secundaria: 1 día tras el nacimiento = 1 año de vida.
+    reloc={'lat','lon','tz'} para relocalizar (mismo instante, casas del lugar)."""
     from datetime import datetime, timedelta
     base = compute_chart(**natal)
     nd = datetime.strptime(natal['date'].replace('-', '/'), '%Y/%m/%d')
@@ -366,9 +367,16 @@ def compute_progressed(natal, target_date):
     years = (td - nd).days / 365.25
     prog_dt = nd + timedelta(days=years)
     prog_date = prog_dt.strftime('%Y/%m/%d')
-    prog = compute_chart(prog_date, natal['time'], natal['lat'], natal['lon'],
+    # Relocalización: mismo momento (hora y tz natales) pero lat/lon del lugar
+    # elegido → los planetas no cambian, sí las casas, el Asc y el MC.
+    lat = (reloc or {}).get('lat', natal['lat'])
+    lon_ = (reloc or {}).get('lon', natal['lon'])
+    prog = compute_chart(prog_date, natal['time'], lat, lon_,
                          natal['tz'], natal.get('hsys', 'P'))
     prog['input']['label'] = 'Progresada a %s' % target_date
+    prog['input']['relocated'] = bool(reloc)
+    prog['input']['lat'] = float(lat)
+    prog['input']['lon'] = float(lon_)
     return {'natal': base, 'progressed': prog, 'years': round(years, 1)}
 
 

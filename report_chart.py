@@ -65,8 +65,8 @@ PLANETS = {
     'aSol':        ('☉', '#C79A4E', 'Sol'),
     'aTierra':     ('⊕', '#4F8A4C', 'Tierra'),   # vector; siempre a 180° del Sol
     'aLuna':       ('☽', '#9BA3C0', 'Luna'),
-    'aMercurio':   ('☿', '#79A794', 'Mercurio'),
-    'aVenus':      ('♀', '#CF92AB', 'Venus'),
+    'aMercurio':   ('☿', '#B9A45E', 'Mercurio'),   # amarillo (como Géminis)
+    'aVenus':      ('♀', '#8FA97F', 'Venus'),       # verde claro (como Libra)
     'aMarte':      ('♂', '#C4796C', 'Marte'),
     'aJupiter':    ('♃', '#C77BA0', 'Júpiter'),   # rosado
     'aSaturno':    ('♄', '#918CA8', 'Saturno'),

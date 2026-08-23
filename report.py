@@ -2127,7 +2127,10 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
             import re as _re
             lbl = p_in.get('label') or ''
             m = _re.search(r'(\d{4}-\d{2}-\d{2})', lbl)
-            r2 = [('cal', fecha_es(m.group(1)))] if m else [('up', lbl or 'Carta progresada')]
+            r2 = [('cal', fecha_es(m.group(1)))] if m else [('cal', lbl or 'Carta progresada')]
+            pplace = (data.get('reloc_city') or city or '').strip()   # lugar del cálculo
+            if pplace:
+                r2.append(('pin', pplace))
             meta['boxes'] = [{'title': 'Nacimiento', 'rows': box1},
                              {'title': 'Progresión', 'rows': _clean(r2)}]
             meta['lamina_natal'] = data.get('natal')

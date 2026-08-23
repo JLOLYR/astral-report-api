@@ -73,6 +73,7 @@ class SolarReturnRequest(BaseModel):
 class ProgressedRequest(BaseModel):
     natal: BirthData
     target_date: str = Field(..., examples=["2026-01-01"], description="Fecha objetivo AAAA-MM-DD")
+    reloc: Optional[Reloc] = None
 
 
 class CombinedRequest(BaseModel):
@@ -160,7 +161,10 @@ def solar_return(req: SolarReturnRequest):
 @app.post("/api/progressed")
 def progressed(req: ProgressedRequest):
     try:
-        return astro.compute_progressed(_bd(req.natal), req.target_date)
+        reloc = None
+        if req.reloc:
+            reloc = {"lat": req.reloc.lat, "lon": req.reloc.lon, "tz": req.reloc.tz}
+        return astro.compute_progressed(_bd(req.natal), req.target_date, reloc)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"No se pudo calcular: {e}")
 
@@ -200,7 +204,11 @@ def make_report(req: ReportRequest):
         elif ct == "progressed":
             if not (req.natal and req.target_date):
                 raise ValueError("Faltan datos natales o la fecha objetivo.")
-            data = astro.compute_progressed(_bd(req.natal), req.target_date)
+            reloc = None
+            if req.reloc:
+                reloc = {"lat": req.reloc.lat, "lon": req.reloc.lon, "tz": req.reloc.tz}
+            data = astro.compute_progressed(_bd(req.natal), req.target_date, reloc)
+            data["reloc_city"] = (req.reloc.city if req.reloc else "") or req.city
         elif ct == "combined":
             if not (req.person_a and req.person_b):
                 raise ValueError("Faltan los datos de una de las personas.")

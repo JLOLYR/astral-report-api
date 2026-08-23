@@ -704,10 +704,29 @@ def build_glossary():
     b.append(("h3", "Luminarias y planetas"))
     if g.get('planetas_intro'):
         b.append(("p", g['planetas_intro']))
+
+    def _img_glyph(fname, w, h, va=-3):
+        p = os.path.join(_rc._ASSETS, fname) if _rc is not None else ''
+        if p and os.path.exists(p):
+            return '<img src="%s" width="%d" height="%d" valign="%d"/>&#160;&#160;' % (p, w, h, va)
+        return ''
+
+    have_earth = False
     for s in g.get('planetas', []):
-        gc = pln.get(nk(s['nombre']))
-        pre = _glyph_tag(*gc) if gc else ''
+        k = nk(s['nombre'])
+        if k == nk('Plutón'):
+            pre = _img_glyph('glyph_pluton.png', 11, 14)      # símbolo de copa actual
+        elif k == nk('Tierra'):
+            pre = _img_glyph('glyph_tierra.png', 13, 13, -2); have_earth = True
+        else:
+            gc = pln.get(k)
+            pre = _glyph_tag(*gc) if gc else ''
         b.append(("item", s['nombre'], s.get('desc', ''), False, pre))
+    if not have_earth:
+        b.append(("item", "Tierra",
+                  "Siempre a 180° del Sol. Es el punto de encarnación: el aquí y ahora "
+                  "físico donde el alma se ancla para experimentar la materia y vivir su libreto.",
+                  False, _img_glyph('glyph_tierra.png', 13, 13, -2)))
     b.append(("h3", "Casas astrales"))
     if g.get('casas_intro'):
         b.append(("p", g['casas_intro']))

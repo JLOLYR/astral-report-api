@@ -63,6 +63,7 @@ SILVER = HexColor('#9AA2AC')
 # key de la app -> (glifo, color, nombre)
 PLANETS = {
     'aSol':        ('☉', '#C79A4E', 'Sol'),
+    'aTierra':     ('⊕', '#4F8A4C', 'Tierra'),   # vector; siempre a 180° del Sol
     'aLuna':       ('☽', '#9BA3C0', 'Luna'),
     'aMercurio':   ('☿', '#79A794', 'Mercurio'),
     'aVenus':      ('♀', '#CF92AB', 'Venus'),
@@ -149,6 +150,17 @@ def _draw_pluto(c, x, y, px, col):
     c.circle(x, cyc, rC, stroke=1, fill=0)    # círculo
     c.line(x, y-4.167*u, x, y-19.083*u)       # tallo
     c.line(x-7.089*u, y-11.625*u, x+7.536*u, y-11.625*u)  # barra
+    c.restoreState()
+
+
+# Glifo de la Tierra (círculo con cruz completa), según el SVG del usuario.
+def _draw_earth(c, x, y, px, col):
+    u = px/36.7
+    R = 18.352*u
+    c.saveState(); c.setStrokeColor(col); c.setLineWidth(max(0.7, 1.8*u))
+    c.circle(x, y, R, stroke=1, fill=0)
+    c.line(x, y-R, x, y+R)
+    c.line(x-R, y, x+R, y)
     c.restoreState()
 
 
@@ -255,7 +267,11 @@ def draw_wheel(c, data, ox, oy, size, center_art='sun', aspect_lines=True,
         c.restoreState()
 
     # planetas
-    plist = data['planets']
+    plist = list(data['planets'])
+    # La Tierra siempre va a 180° del Sol (no viene en los datos: se agrega aquí)
+    _sun = next((p for p in plist if p['key'] == 'aSol'), None)
+    if _sun is not None and not any(p['key'] == 'aTierra' for p in plist):
+        plist.append({'key': 'aTierra', 'lon': (_sun['lon'] + 180.0) % 360})
     lons = [p['lon'] for p in plist]
     shown = spread(lons, 6.5)   # más compacto (stellium tipo AstroGold)
     # líneas de aspecto (sobre el aro 150), en longitud real
@@ -276,6 +292,8 @@ def draw_wheel(c, data, ox, oy, size, center_art='sun', aspect_lines=True,
         c.setFillColor(col); c.circle(xr, yr, 3*sc, stroke=0, fill=1)
         if p['key'] == 'aPluton':
             gx, gy = pt(a, 320); _draw_pluto(c, gx, gy, 27*sc, col)
+        elif p['key'] == 'aTierra':
+            gx, gy = pt(a, 320); _draw_earth(c, gx, gy, 23*sc, col)
         else:
             gtext(a, 320, gl, col, 36)
         # grado / signo / minutos
@@ -585,6 +603,8 @@ def draw_legend(c, page_w, page_h):
             gx = left + cc*colw; gy = yy - r*rowh
             if glyph == '♇':
                 _draw_pluto(c, gx+13, gy-4, 17, _hx(gcol))
+            elif glyph == '⊕':
+                _draw_earth(c, gx+13, gy-4, 16, _hx(gcol))
             else:
                 c.setFont(GLYPHF(), 20); c.setFillColor(_hx(gcol))
                 c.drawCentredString(gx+13, gy-7, glyph)
@@ -595,7 +615,7 @@ def draw_legend(c, page_w, page_h):
 
     # Planetas y puntos (15)
     block_head("Planetas y puntos", y); y -= 24
-    order = ['aSol','aLuna','aMercurio','aVenus','aMarte','aJupiter','aSaturno',
+    order = ['aSol','aTierra','aLuna','aMercurio','aVenus','aMarte','aJupiter','aSaturno',
              'aUrano','aNeptuno','aPluton','aChiron','aNoduloNorte','aNoduloSur',
              'aLunaNegra','aRuedaFortuna']
     pe = [(PLANETS[k][0], PLANETS[k][1], PLANETS[k][2]) for k in order]

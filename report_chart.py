@@ -351,8 +351,23 @@ ADORNO = {'natal':'sun-sq.png','solar_return':'sun-sq.png','progressed':'moon-sq
 
 
 # ── Helpers de dibujo de la página ───────────────────────────────────────────
-def _tracked(c, cx, y, text, font, size, tracking, color, align='center'):
-    """Dibuja texto con letter-spacing. cx = centro si align='center'."""
+def _fit(c, text, font, size, maxw, minsize=7.0):
+    """Devuelve el mayor tamaño ≤ size cuyo ancho de `text` cabe en maxw."""
+    if not text:
+        return size
+    s = float(size)
+    while s > minsize and pdfmetrics.stringWidth(text, font, s) > maxw:
+        s -= 0.5
+    return s
+
+
+def _tracked(c, cx, y, text, font, size, tracking, color, align='center', maxw=None):
+    """Dibuja texto con letter-spacing. cx = centro si align='center'.
+    Si maxw se indica y el texto no cabe, encoge tamaño y tracking a la par."""
+    if maxw and text:
+        total = sum(pdfmetrics.stringWidth(ch, font, size) for ch in text) + tracking*(len(text)-1)
+        if total > maxw:
+            f = maxw/total; size *= f; tracking *= f
     c.setFont(font, size); c.setFillColor(color)
     widths = [pdfmetrics.stringWidth(ch, font, size) for ch in text]
     total = sum(widths) + tracking*(len(text)-1 if text else 0)
@@ -453,15 +468,17 @@ def draw_lamina(c, page_w, page_h, chart_type, meta, data,
     _draw_watermark(c, page_w, page_h)
 
     y = page_h - 42
-    # antetítulo (versalitas, tracking)
-    _tracked(c, cx, y, ante.upper(), SERIF_SB(), 13.5, 1.6, INK)
+    # antetítulo (versalitas, tracking) — se encoge si es muy largo
+    _tracked(c, cx, y, ante.upper(), SERIF_SB(), 13.5, 1.6, INK, maxw=page_w-64)
     y -= 22
-    c.setFont(SERIF_I(), 17); c.setFillColor(HexColor('#A07127'))
+    _sf = _fit(c, sub, SERIF_I(), 17, page_w-64, 11)
+    c.setFont(SERIF_I(), _sf); c.setFillColor(HexColor('#A07127'))
     c.drawCentredString(cx, y, sub)
     y -= 42
-    # nombre (armónico, no invasivo)
+    # nombre (armónico, no invasivo) — se encoge para nombres largos
     nombre = meta.get('lamina_name') or meta.get('name') or ''
-    nsize = 30 if ct == 'combined' else 38
+    nsize = _fit(c, nombre or ' ', SERIF_M(), 30 if ct == 'combined' else 38,
+                 page_w-80, 18)
     c.setFont(SERIF_M(), nsize); c.setFillColor(INK)
     c.drawCentredString(cx, y, nombre or ' ')
     y -= 16
@@ -501,13 +518,16 @@ def draw_lamina(c, page_w, page_h, chart_type, meta, data,
         _chamfer(c, bx+6, by+6, bw-12, bh-12, chf-5, GOLD, 0.6, alpha=0.55)
         ty = by + bh - pad_top
         if title:
-            _tracked(c, bx+bw/2, ty-9, title.upper(), SERIF_SB(), 10, 1.7, GOLD_D)
+            _tracked(c, bx+bw/2, ty-9, title.upper(), SERIF_SB(), 10, 1.7, GOLD_D,
+                     maxw=bw-20)
             ty -= title_h
         ry = ty - rowh/2
+        tx = bx+42; tmaxw = bw - 42 - 12          # ancho útil del texto de la fila
         for icon, txt in rows:
             _icon(c, icon, bx+22, ry-6, 11, GOLD)
-            c.setFont(SERIF_M(), rfs); c.setFillColor(INK)
-            c.drawString(bx+42, ry-4, txt)
+            fs = _fit(c, txt, SERIF_M(), rfs, tmaxw, 8.0)
+            c.setFont(SERIF_M(), fs); c.setFillColor(INK)
+            c.drawString(tx, ry-4, txt)
             ry -= rowh
     # adorno (sin solaparse con las cajas)
     ad = ADORNO.get(ct)
@@ -538,7 +558,7 @@ def draw_dual_wheels(c, page_w, page_h, meta, natal, der, ntitle, dtitle,
     _draw_watermark(c, page_w, page_h)
     # título general + rombo
     title = (meta.get('dual_title') or 'Tus dos cartas')
-    _tracked(c, cx, page_h-32, title.upper(), SERIF_SB(), 13, 1.6, INK)
+    _tracked(c, cx, page_h-32, title.upper(), SERIF_SB(), 13, 1.6, INK, maxw=page_w-120)
     _diamond_rule(c, cx, page_h-46, 150, GOLD)
     # dos ruedas con su rótulo y su línea de datos
     subs = meta.get('dual_subs') or ['', '']
@@ -548,11 +568,14 @@ def draw_dual_wheels(c, page_w, page_h, meta, natal, der, ntitle, dtitle,
     cap_y = page_h - 72
     for k, (chart, cap) in enumerate(((natal, ntitle), (der, dtitle))):
         halfcx = page_w*(0.25 if k == 0 else 0.75)
-        c.setFont(SERIF_SB(), 15); c.setFillColor(HexColor('#A07127'))
+        _cw = page_w*0.46
+        _cs = _fit(c, cap or '', SERIF_SB(), 15, _cw, 10)
+        c.setFont(SERIF_SB(), _cs); c.setFillColor(HexColor('#A07127'))
         c.drawCentredString(halfcx, cap_y, cap or '')
         sub = subs[k] if k < len(subs) else ''
         if sub:
-            c.setFont(SERIF_I(), 11.5); c.setFillColor(INK)
+            _ss = _fit(c, sub, SERIF_I(), 11.5, _cw, 8)
+            c.setFont(SERIF_I(), _ss); c.setFillColor(INK)
             c.drawCentredString(halfcx, cap_y-17, sub)
         wy = bot + ((top-bot) - wsize)/2.0
         wx = halfcx - wsize/2.0

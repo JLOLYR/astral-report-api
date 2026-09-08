@@ -455,6 +455,15 @@ def build_sections(chart, chart_type='natal', house_key='house', aspects=None):
     bct = interp.get('by_chart_type', {})
     intro = bct.get(chart_type, {}).get('intro', '') or bct.get('natal', {}).get('intro', '')
 
+    # Textos específicos del tipo de carta (p.ej. retorno solar). Se activa solo
+    # si el bloque trae planeta-en-casa Y signo-en-casa propios; si no, usa natal.
+    _blk = interp.get(chart_type) or {}
+    src = _blk if ('planet_in_house' in _blk and 'cusp_in_sign' in _blk) else nat
+
+    def _P(t):
+        """Divide un texto en párrafos (respeta los saltos dobles)."""
+        return [x.strip() for x in t.split('\n\n') if x.strip()] if t else []
+
     # Encabezados por tipo de carta
     PL_HEAD = {'natal': "Los planetas en tu carta natal",
                'transit': "Los planetas en tránsito",
@@ -470,12 +479,8 @@ def build_sections(chart, chart_type='natal', house_key='house', aspects=None):
         house = p.get(house_key, p.get('house', 1))
         title = "%s en %s · Casa %s" % (p['name'], p.get('sign_es', sign_en), ROMAN[house - 1])
         paras = []
-        t_sign = nat.get('planet_in_sign', {}).get(key, {}).get(sign_en)
-        if t_sign:
-            paras.append(t_sign)
-        t_house = nat.get('planet_in_house', {}).get(key, {}).get(str(house))
-        if t_house:
-            paras.append(t_house)
+        paras += _P(src.get('planet_in_sign', {}).get(key, {}).get(sign_en))
+        paras += _P(src.get('planet_in_house', {}).get(key, {}).get(str(house)))
         if paras:
             items.append((title, paras))
     if items:
@@ -483,9 +488,9 @@ def build_sections(chart, chart_type='natal', house_key='house', aspects=None):
 
     cusp_items = []
     for h in chart['houses']:
-        t = nat.get('cusp_in_sign', {}).get(str(h['num']), {}).get(h['sign'])
+        t = src.get('cusp_in_sign', {}).get(str(h['num']), {}).get(h['sign'])
         if t:
-            cusp_items.append(("Casa %s en %s" % (h['roman'], h.get('sign_es', h['sign'])), [t]))
+            cusp_items.append(("Casa %s en %s" % (h['roman'], h.get('sign_es', h['sign'])), _P(t)))
     if cusp_items:
         sections.append(("Las cúspides de las casas", cusp_items))
 

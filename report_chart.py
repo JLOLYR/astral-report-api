@@ -50,6 +50,7 @@ def GLYPHF():   _reg(); return _registered['glyph']
 # ── Paletas ─────────────────────────────────────────────────────────────────
 INK   = HexColor('#26304F')
 INK2  = HexColor('#3A3A46')
+RETRO = HexColor('#C0392B')   # rojo para grados de planetas retrógrados
 GOLD  = HexColor('#B8863B')
 def _shift(hexc, d):
     c = HexColor(hexc)
@@ -296,14 +297,15 @@ def draw_wheel(c, data, ox, oy, size, center_art='sun', aspect_lines=True,
             gx, gy = pt(a, 320); _draw_earth(c, gx, gy, 23*sc, col)
         else:
             gtext(a, 320, gl, col, 36)
-        # grado / signo / minutos
+        # grado / signo / minutos — en ROJO si el planeta está retrógrado
         deg = int(real % 30); mn = int(round((real % 1)*60))
         if mn == 60: mn = 0; deg += 1
         sidx = int(real // 30) % 12
-        x, y = pt(a, 281); c.setFillColor(INK2); c.setFont(SERIF_M(), 21*sc)
+        numcol = RETRO if p.get('retrograde') else INK2
+        x, y = pt(a, 281); c.setFillColor(numcol); c.setFont(SERIF_M(), 21*sc)
         c.drawCentredString(x, y-21*sc*0.34, u"%d°" % deg)
         gtext(a, 256, SIGN_GLYPH[sidx], _hx(SIGN_COL[sidx]), 18)
-        x, y = pt(a, 232); c.setFillColor(INK2); c.setFont(SERIF_M(), 18*sc)
+        x, y = pt(a, 232); c.setFillColor(numcol); c.setFont(SERIF_M(), 18*sc)
         c.drawCentredString(x, y-18*sc*0.34, u"%02d'" % mn)
 
     # ejes Ac / Mc con punta de flecha
@@ -321,6 +323,138 @@ def draw_wheel(c, data, ox, oy, size, center_art='sun', aspect_lines=True,
     axis_arrow(mc, SILVER, 'Mc')
 
 _ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII']
+
+
+# ── BI-RUEDA (tránsitos) ─────────────────────────────────────────────────────
+# De afuera hacia adentro: disco de signos (con decanatos) · anillo de TRÁNSITOS
+# · anillo de la NATAL · números de casa · círculo de aspectos natales.
+def draw_biwheel(c, natal, transit, ox, oy, size):
+    _reg()
+    S = 1000.0; sc = size/S; cx = cy = 500.0
+    asc = natal['angles']['asc']['lon']; mc = natal['angles']['mc']['lon']
+    ccx, ccy = ox+cx*sc, oy+(S-cy)*sc
+
+    def pt(lon, r):
+        th = math.radians(180 + asc - lon)
+        return (ox + (cx + r*math.cos(th))*sc, oy + (S - (cy + r*math.sin(th)))*sc)
+
+    def ring(r, col, w):
+        c.setStrokeColor(col); c.setLineWidth(w*sc); c.circle(ccx, ccy, r*sc, stroke=1, fill=0)
+
+    def line(l1, r1, l2, r2, col, w, alpha=1):
+        x1, y1 = pt(l1, r1); x2, y2 = pt(l2, r2)
+        c.setStrokeColor(col); c.setLineWidth(w*sc)
+        if alpha < 1: c.setStrokeAlpha(alpha)
+        c.line(x1, y1, x2, y2)
+        if alpha < 1: c.setStrokeAlpha(1)
+
+    def gtext(lon, r, glyph, col, px):
+        x, y = pt(lon, r); c.setFillColor(col); c.setFont(GLYPHF(), px*sc)
+        c.drawCentredString(x, y - px*sc*0.36, glyph)
+
+    # Radios
+    R_SO, R_DEC, R_SI = 492, 446, 420          # disco de signos (exterior)
+    R_T = 420; R_N = 290; R_H = 172; R_A = 150 # tránsitos | natal | casas | aspectos
+
+    # ── disco de signos con decanatos (borde exterior)
+    ring(R_SO, GOLD, 1.3); ring(R_SO-6, GOLD_F, 0.7); ring(R_DEC, GOLD, 0.9); ring(R_SI, GOLD, 1.0)
+    for d in range(360):
+        r1 = R_SO-11 if d % 5 else (R_SO-14 if d % 10 else R_SO-18)
+        line(d, R_SO-6, d, r1, GOLD_F, 0.5 if d % 5 else 0.7, 0.9)
+    for i in range(12):
+        l0 = i*30
+        line(l0, R_SI, l0, R_SO, GOLD, 1.0)
+        gtext(l0+15, 466, SIGN_GLYPH[i], _hx(SIGN_COL[i]), 32)
+        for dd in (10, 20):
+            line(l0+dd, R_SI, l0+dd, R_DEC, GOLD_F, 0.5, 0.9)
+        for k, g in enumerate(DECANS[i]):
+            gtext(l0+5+k*10, 433, g, GOLD, 13)
+
+    # ── separaciones de anillos
+    ring(R_N, GOLD, 1.0); ring(R_H, GOLD_F, 0.8); ring(R_A, GOLD_F, 0.8)
+
+    # ── casas natales: cúspides que cruzan ambos anillos + números
+    houses = [h['lon'] for h in natal['houses']]
+    for hi, hl in enumerate(houses):
+        axis = hi in (0, 3, 6, 9)
+        line(hl, R_A, hl, R_SI, GOLD_D if axis else GOLD, 1.4 if axis else 0.6, 1 if axis else 0.7)
+        arc = (houses[(hi+1) % 12] - hl) % 360
+        x, y = pt((hl + arc/2.0) % 360, (R_H+R_A)/2.0)
+        c.setFillColor(GOLD_D); c.setFont(SERIF_SB(), 13*sc)
+        c.drawCentredString(x, y-13*sc*0.34, _ROMAN[hi])
+
+    # ── sol marca de agua (reducido) en el centro
+    gds = HexColor('#96682A')
+    def _P(r, ang):
+        return (ccx + r*math.cos(ang)*sc, ccy - r*math.sin(ang)*sc)
+    c.saveState(); c.setFillColor(gds); c.setFillAlpha(0.3); c.setStrokeAlpha(0.3)
+    for i in range(48):
+        a0 = math.radians(i*7.5)
+        rr = 118 if i % 4 == 0 else (92 if i % 2 == 0 else 72)
+        aw = math.radians(5.0 if i % 4 == 0 else 3.2)
+        pth = c.beginPath(); pth.moveTo(*_P(28, a0-aw)); pth.lineTo(*_P(rr, a0))
+        pth.lineTo(*_P(28, a0+aw)); pth.close(); c.drawPath(pth, stroke=0, fill=1)
+    c.setFillColor(HexColor('#FFFFFF')); c.setStrokeColor(gds); c.setLineWidth(1.2*sc)
+    c.setFillAlpha(0.3); c.setStrokeAlpha(0.3); c.circle(ccx, ccy, 28*sc, stroke=1, fill=1)
+    c.restoreState()
+
+    def _with_earth(planets):
+        pl = list(planets)
+        s = next((p for p in pl if p['key'] == 'aSol'), None)
+        if s is not None and not any(p['key'] == 'aTierra' for p in pl):
+            pl.append({'key': 'aTierra', 'lon': (s['lon']+180.0) % 360})
+        return pl
+
+    # ── aspectos natales dentro del círculo central
+    npl = _with_earth(natal['planets'])
+    pos = {p['key']: p['lon'] for p in npl}
+    for a in natal.get('aspects', []):
+        t = _ASP_ES.get(a['type'], a['type'])
+        if t == 'conjunction' or a['a'] not in pos or a['b'] not in pos: continue
+        col = ASPECTS.get(t, ('#999',))[0]
+        line(pos[a['a']], R_A, pos[a['b']], R_A, _hx(col), 0.9, 0.65)
+
+    def band(plist, r_dot, r_gl, gsize, r_deg, r_sig, r_min, fs, sep):
+        shown = spread([p['lon'] for p in plist], sep)
+        for i, p in enumerate(plist):
+            col = _hx(PLANETS.get(p['key'], ('', '#8890B0', ''))[1])
+            gl = PLANETS.get(p['key'], ('?',))[0]
+            a = shown[i]; real = p['lon']
+            xr, yr = pt(real, r_dot); c.setFillColor(col); c.circle(xr, yr, 2.8*sc, stroke=0, fill=1)
+            gx, gy = pt(a, r_gl)
+            if p['key'] == 'aPluton':   _draw_pluto(c, gx, gy, gsize*0.78*sc, col)
+            elif p['key'] == 'aTierra': _draw_earth(c, gx, gy, gsize*0.66*sc, col)
+            else:
+                c.setFillColor(col); c.setFont(GLYPHF(), gsize*sc)
+                c.drawCentredString(gx, gy - gsize*sc*0.36, gl)
+            deg = int(real % 30); mn = int(round((real % 1)*60))
+            if mn == 60: mn = 0; deg += 1
+            sidx = int(real // 30) % 12
+            numcol = RETRO if p.get('retrograde') else INK2
+            x, y = pt(a, r_deg); c.setFillColor(numcol); c.setFont(SERIF_M(), fs*sc)
+            c.drawCentredString(x, y - fs*sc*0.34, u"%d°" % deg)
+            x, y = pt(a, r_sig); c.setFillColor(_hx(SIGN_COL[sidx])); c.setFont(GLYPHF(), fs*0.9*sc)
+            c.drawCentredString(x, y - fs*0.9*sc*0.36, SIGN_GLYPH[sidx])
+            x, y = pt(a, r_min); c.setFillColor(numcol); c.setFont(SERIF_M(), (fs-2)*sc)
+            c.drawCentredString(x, y - (fs-2)*sc*0.34, u"%02d'" % mn)
+
+    # anillo de TRÁNSITOS (entre el disco de signos y la natal)
+    band(_with_earth(transit['planets']), R_T-4, 390, 30, 357, 336, 316, 17, 6.0)
+    # anillo de la NATAL
+    band(npl, R_N-4, 262, 28, 232, 213, 194, 16, 7.0)
+
+    # ── ejes Ac / Mc natales con flecha hasta fuera del disco
+    def axis_arrow(lon, col, label):
+        line(lon, R_A, lon, R_SI, col, 1.4)
+        x1, y1 = pt(lon, R_SO); x2, y2 = pt(lon, R_SO+18)
+        c.setStrokeColor(col); c.setLineWidth(1.4*sc); c.line(x1, y1, x2, y2)
+        tip = pt(lon, R_SO+30); b1 = pt(lon-0.8, R_SO+18); b2 = pt(lon+0.8, R_SO+18)
+        p = c.beginPath(); p.moveTo(*tip); p.lineTo(*b1); p.lineTo(*b2); p.close()
+        c.setFillColor(col); c.drawPath(p, stroke=0, fill=1)
+        lx, ly = pt(lon+3.2, R_SO+22); c.setFont(SERIF_SB(), 16*sc)
+        c.drawCentredString(lx, ly-16*sc*0.34, label)
+    axis_arrow(asc, GOLD_D, 'Ac')
+    axis_arrow(mc, SILVER, 'Mc')
 
 
 # ── Textos por tipo ──────────────────────────────────────────────────────────
@@ -345,9 +479,14 @@ TEXTS = {
            "Aquello que traes de antes y que este cielo todavía recuerda.",
            ("Tu alma guarda registro de cada camino recorrido.",
             "Aquí comienza su lectura.")),
+ 'transit': ("El mapa del cielo que hoy te acompaña — Tránsitos",
+           "Cómo conversa el cielo actual con la carta con la que naciste.",
+           ("El cielo nunca se detiene: cada día dialoga con tu mapa natal.",
+            "Conocer tus tránsitos es aprender a moverte a su ritmo.")),
 }
 ADORNO = {'natal':'sun-sq.png','solar_return':'sun-sq.png','progressed':'moon-sq.png',
-          'combined':'hands-heart.png','akashic':'akashic-hands.png'}
+          'combined':'hands-heart.png','akashic':'akashic-hands.png',
+          'transit':'moon-sq.png'}
 
 
 # ── Helpers de dibujo de la página ───────────────────────────────────────────
@@ -486,10 +625,14 @@ def draw_lamina(c, page_w, page_h, chart_type, meta, data,
     y -= 10
 
     # rueda
-    wsize = min(page_w-70, 442)
+    trans = meta.get('lamina_transit')
+    wsize = min(page_w-60, 478) if trans else min(page_w-70, 442)
     wx = cx - wsize/2; wy = y - wsize
     _stars(c, cx, wy+wsize*0.5, wsize*0.62, HexColor('#C08B33'))
-    draw_wheel(c, data, wx, wy, wsize, center_art, aspect_lines, show_decans)
+    if trans:
+        draw_biwheel(c, data, trans, wx, wy, wsize)
+    else:
+        draw_wheel(c, data, wx, wy, wsize, center_art, aspect_lines, show_decans)
 
     # ── bloques de datos (con título, filas alineadas) ──
     raw = meta.get('boxes') or [_default_box(meta, data)]
@@ -666,3 +809,10 @@ def draw_legend(c, page_w, page_h):
         c.drawCentredString(gx+48, gy-10, glyph)
         c.setFont(SERIF_M(), 14.5); c.setFillColor(INK)
         c.drawString(gx+64, gy-9, name)
+
+    # Nota: los grados en rojo = planetas retrógrados
+    yn = y - 3*26 - 14
+    c.setFont(SERIF_M(), 13); c.setFillColor(RETRO)
+    c.drawString(left, yn, u"00° 00'")
+    c.setFont(SERIF_I(), 13); c.setFillColor(INK)
+    c.drawString(left+70, yn, u"— los grados en rojo indican un planeta retrógrado.")

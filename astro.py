@@ -4,7 +4,7 @@ astro.py — Motor de cálculo astrológico con Swiss Ephemeris (pyswisseph).
 
 Calcula, para una fecha/hora/lugar:
   - Planetas (Sol..Plutón) con efemérides Moshier (sin archivos externos)
-  - Nodos lunares (medio) y Luna Negra (apogeo lunar medio = MEAN_APOG)
+  - Nodos lunares (verdaderos = TRUE_NODE) y Luna Negra (apogeo verdadero = OSCU_APOG)
   - Quirón (usa los archivos seas_*.se1 incluidos en ./ephe)
   - Casas (Placidus), Ascendente y Medio Cielo
   - Parte de la Fortuna (fórmula diurna/nocturna)
@@ -43,8 +43,8 @@ PLANETS = [
     ('aNeptuno', 'Neptuno', swe.NEPTUNE, _MOS),
     ('aPluton', 'Plutón', swe.PLUTO, _MOS),
     ('aChiron', 'Quirón', swe.CHIRON, _SWI),
-    ('aNoduloNorte', 'Nodo Norte', swe.MEAN_NODE, _MOS),
-    ('aLunaNegra', 'Luna Negra', swe.MEAN_APOG, _MOS),
+    ('aNoduloNorte', 'Nodo Norte', swe.TRUE_NODE, _MOS),
+    ('aLunaNegra', 'Luna Negra', swe.OSCU_APOG, _MOS),
 ]
 
 ASPECTS = [

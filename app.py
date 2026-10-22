@@ -28,7 +28,7 @@ app = FastAPI(title="Reporte Astral API", version="1.1.0",
               description="Cálculo de cartas astrológicas con Swiss Ephemeris.")
 
 # ── CORS ────────────────────────────────────────────────────────────────
-# Por defecto permite cualquier origen (GitHub Pages). Podés restringirlo
+# Por defecto permite cualquier origen (GitHub Pages). Puedes restringirlo
 # con ALLOW_ORIGINS="https://usuario.github.io,https://midominio.com"
 _origins_env = os.environ.get("ALLOW_ORIGINS", "*").strip()
 _origins = ["*"] if _origins_env == "*" else [o.strip() for o in _origins_env.split(",") if o.strip()]

@@ -1,141 +1,194 @@
 {
-  "_meta": {
-    "nota": "Preámbulo del reporte natal. Los textos de la CRUZ FIJA y del ELEMENTO TIERRA provienen del reporte modelo. Los de las otras cruces y elementos son versiones breves editables: puedes ampliarlos aquí mismo y volver a subir este archivo.",
-    "version": 1
+ "_meta": {
+  "nota": "Preámbulo del reporte natal. Los textos de la CRUZ FIJA y del ELEMENTO TIERRA provienen del reporte modelo. Los de las otras cruces y elementos son versiones breves editables: puedes ampliarlos aquí mismo y volver a subir este archivo.",
+  "version": 1
+ },
+ "intro_titulo": "Qué es una carta astral natal",
+ "intro": [
+  "La Carta Astral Natal es un mapa, una carta de navegación acerca del camino que el alma debe recorrer internamente, para cumplir con su misión gracias a los sucesos externos que hayas de vivir mientras estés en el planeta Tierra. Es, entonces, como el libreto que un actor o actriz debe desempeñar en el escenario de la vida que escogió -o necesita- representar en esta encarnación. Si es un libreto, es un escrito en donde las letras están representadas por símbolos que encarnan a los diferentes componentes de la carta natal. Por ejemplo: los planetas son los actores, los signos en que ellos están son los disfraces que utilizan para representar su papel, y las casas -que dependen de las coordenadas y de la hora de nacimiento de cada quién- son los distintos escenarios en donde los actores, cada uno con su vestimenta mitológica, ha de representar lo que está escrito en el libreto.",
+  "La carta natal personal está analizada en un principio, bajo los tres principales hechos que definen el libreto de cada quien, y que son: la fecha, el sitio y la hora de nacimiento. Una vez sabido esto, podemos entrar al estudio de la carta personal.",
+  "Y de los factores astrales, en los cuales me baso para hacer tu carta natal, los tres primeros y más importantes son:",
+  "1. La ubicación del Sol -que es tu esencia- en signo y casa.",
+  "2. Cuál es el signo que ascendía en el horizonte a la hora de tu nacimiento allá en las coordenadas geográficas donde lo hiciste, y que se conoce con el nombre de Ascendente -que representa tu personalidad-.",
+  "3. Y por último, el signo y la casa en donde está la Luna -que es el alma encarnada-, así como lo que significa en cuál de las ocho fases lunares estaba ella cuando naciste.",
+  "Por lo tanto, como en este estudio se analiza lo que se deriva de estos tres factores astrales, recuerda que, como \"elegiste\" tu propia carta astral antes de encarnar, como actor o actriz que ha de entrar al escenario de la vida con su libreto propio, las personas de los signos que aparezcan en ella, y que son tus compañeros de reparto, no son culpables de nada de lo que te suceda, porque tú los seleccionaste como actores y actrices con un papel fundamental para tu libreto de vida en el cual, en cambio, cada uno -incluyéndote a ti- sí es responsable de su actuación. Bajo TODOS los signos mencionados en este estudio, inevitablemente, tarde o temprano, llegarán al escenario de tu vida personas con las cuales hay asuntos inconclusos que tienes que resolver.",
+  "Una aclaración importante: se llama CÚSPIDE al punto o línea del inicio de una casa. SIEMPRE hay un signo que rige una cúspide, y el planeta que rija esa casa, rige lo que ella significa. Pero, a veces el signo puede quedar después de los 10 o 20 grados de un signo y, en tal caso, se dice que está en el segundo o tercer decanato de dicho signo. Como a cada decanato también lo rige un planeta -y los puedes ver graficados en colores en el círculo de afuera- se dice que hay que buscar en dónde se ubica el planeta regente de ese decanato, para encontrar más información acerca de cada casa zodiacal.",
+  "Antes de introducirme en el tema, quisiera decirte cuáles son, a mi entender, los doce mandamientos zodiacales. Toda la lista que leerás a continuación tiene que ver con tu carta natal, pero están resaltados los signos, luminarias, planetas y casas que más se involucran en esta descripción de tu carta astral natal."
+ ],
+ "mand_signos_intro": "He aquí, primero, los mandamientos de los signos zodiacales, que dependen del año y del mes en el cual naciste. Aquellos resaltados son los más importantes de tu carta natal.",
+ "mand_signos": {
+  "Aries": "Asegúrate de ser quien debes ser.",
+  "Tauro": "Que nada ni nadie se adueñe de ti.",
+  "Géminis": "Conoce a la otra persona que hay en ti.",
+  "Cáncer": "Siente con el alma quién eres en tu interior.",
+  "Leo": "Irradia la luz que eres desde tu interior.",
+  "Virgo": "Úsate como tu mejor herramienta.",
+  "Libra": "Mantente en armonía interna contigo.",
+  "Escorpio": "Vence y no alimentes lo que te domina.",
+  "Sagitario": "Pon la fe en ti mientras vas por el camino.",
+  "Capricornio": "Párate firme, mira lejos y no te quedes ahí.",
+  "Acuario": "Ama al prójimo y déjate amar por él.",
+  "Piscis": "Vive y vete en Paz, eres la Unidad Universal."
+ },
+ "mand_casas_intro": "Ahora, he aquí los mandamientos de las casas zodiacales, que dependen de la hora y coordenadas geográficas en las cuales naciste. Esto es lo más personal de tu libreto terrenal y que muchas veces tengo que repetir su significado, porque los signos te conectan con lo universal y las casas con los sucesos que has de vivir en tu existencia planetaria. Aquellas resaltadas son las más importantes de tu carta natal.",
+ "mand_casas": {
+  "Casa I": "Logra el dominio sobre tu propio ser.",
+  "Casa II": "Aprende a trascender todo lo material.",
+  "Casa III": "Discierne qué es verdad y qué es mentira.",
+  "Casa IV": "Echa fuertes raíces, pero sin quedarte ahí.",
+  "Casa V": "Cuida con amor tu esencia y dignidad humana.",
+  "Casa VI": "Sé útil a ti y a los demás sabiendo dar la mano.",
+  "Casa VII": "Jamás juzgues a alguien, ponte en su lugar.",
+  "Casa VIII": "Mantente en una constante transformación.",
+  "Casa IX": "Encuentra, comprende y sigue tu propia verdad.",
+  "Casa X": "Aprende a arrodillarte ante las leyes universales.",
+  "Casa XI": "Sé un verdadero ser humano ante el prójimo.",
+  "Casa XII": "Mantén tu desnudez ante la divinidad interna."
+ },
+ "mand_planetas_intro": "Y, por último, los mandamientos de los principales actores y actrices mitológicos de tu carta natal, es decir, las luminarias, planetas y algunos focos de energía. Aquellos resaltados son los más importantes de tu carta natal.",
+ "mand_planetas": {
+  "Sol": "Fluye a través de lo que tienes que ser.",
+  "Luna": "Alimenta bien tu alma en todo sentido.",
+  "Mercurio": "Conoce quién eres en todo momento.",
+  "Venus": "Mantén afinidad con el mundo y los demás.",
+  "Tierra": "Aprende a ser tu propia base personal.",
+  "Marte": "Expande y canaliza la energía que eres.",
+  "Júpiter": "Expande la conciencia superior que eres.",
+  "Saturno": "Haz tu tarea comprendiendo y sin renegar.",
+  "Quirón": "Da la mano a otros, sánalos y déjate sanar.",
+  "Urano": "Abre tu mente y libérate de lo que no eres.",
+  "Neptuno": "Navega espiritualmente en tu interior.",
+  "Plutón": "No alimentes a ninguna bestia interna.",
+  "Nódulo Lunar Norte": "No detengas tu andar consciente.",
+  "Nódulo Lunar Sur": "Corta con el pasado que cargas.",
+  "Luna Negra": "No te dejes intoxicar por nadie.",
+  "Rueda de la Fortuna": "Sé la felicidad para compartirla."
+ },
+ "mand_cierre": "Ahora bien, con las tres frases más resaltadas, que son las que te incumben por tu signo solar, por la casa que ocupa tu Sol natal y por quien lo rige a él, construye una frase y aplícala a tu vida diaria.",
+ "puente_cruz": "Sabido esto, comienzo a describir los principales componentes de tu carta astral natal; recordándote primero, que aquellos signos mencionados pertenecen a personas que escogiste como compañeras y compañeros de escenario en tu libreto de vida; obviamente, cada una de ellas aparecerá en algún momento de tu existencia con su propio libreto, para compartirlo con el tuyo en esta vida. Sólo tú sabes qué papel han de jugar en tu existencia las personas que salgan mencionadas bajo los signos que has de encontrar en el estudio de tu carta natal, porque los escogiste -a todos ellos- antes de encarnar.",
+ "cruces": {
+  "fija": {
+   "titulo": "Cruz Fija",
+   "signos": [
+    "Tauro",
+    "Leo",
+    "Escorpio",
+    "Acuario"
+   ],
+   "mision": "Misión: naciste para concentrar el poder que hay en ti mismo, persistiendo en lograr alguna idea o propósito específico que quieres lograr en esta vida. Para ello no debes resistirte al cambio, porque tu signo es el más renuente a cambiar de posición en la vida. Por eso se dice que es el signo de la terquedad y la insistencia.",
+   "representacion": {
+    "Tauro": "Tauro: perteneciendo al elemento Tierra, representa al signo más saludable de todo el zodíaco; es decir, se enferma, pero supera cualquier enfermedad. Encarna el saberse alimentar, el apego y el desarrollo material, las finanzas, los bienes económicos y materiales, la conservación, lo consistente, la buena vida y la comodidad, la energía constructiva, el placer de los sentidos, las posesiones, la seguridad, el tener siempre la razón, las tareas concretas, la tenacidad y lo buen vividor con un tren de vida costoso.",
+    "Leo": "Leo: su elemento es el Fuego que representa el amor fogoso, el apego al orgullo, las apuestas y el juego, la banca, ser el centro de los demás, la especulación, la fidelidad a un principio, individualidad, el lujo, el poder conservado, el prestigio, el reinar y la voluntad.",
+    "Escorpio": "Escorpio: este es el signo complemento de Tauro, perteneciente al elemento Agua. Representa el amor o atracción sexual, el apego emocional, los deseos, el dinero ajeno, la fidelidad a un amor o a unos sentimientos, la fuerza psíquica, la necesidad del vínculo emocional, personas atadas a sus sentimientos y a los placeres, la tenacidad, las tentaciones, la toma de conciencia a través de crisis, la transformación, los trastornos emocionales. Todo ello simbolizando el sacrificio que tienes que hacer de la ilusión a la realidad, basado en la experiencia.",
+    "Acuario": "Acuario: su elemento es el Aire que representa la mente universal, el apego a las ideas y principios, el concentrar los valores dentro de las instituciones culturales, los ideales amplios, la igualdad humana, lo inconvencional, la independencia, la innovación, el intelecto desarrollado, la inventiva científica, la liberación por la mente, la luz de la conciencia universal, las relaciones desapegadas."
+   },
+   "cierre": "A su vez, alguien Acuario no ansía la fastuosidad de alguien Tauro o Leo. Igualmente, los signos de Agua y Fuego de esta cruz, es decir, Leo y Escorpio -el signo más importante de la cruz-, no tienen tanta facilidad para adaptarse a lo transitorio como el resto de signos de dichos elementos. A ningún signo de la cruz fija le gusta renunciar a las ideas infantiles, tipo navidad; y, menos que a ninguno, a Escorpio."
   },
-  "intro_titulo": "Qué es una carta astral natal",
-  "intro": [
-    "La Carta Astral Natal es un mapa, una carta de navegación acerca del camino que el alma debe recorrer internamente, para cumplir con su misión gracias a los sucesos externos que hayas de vivir mientras estés en el planeta Tierra. Es, entonces, como el libreto que un actor o actriz debe desempeñar en el escenario de la vida que escogió -o necesita- representar en esta encarnación. Si es un libreto, es un escrito en donde las letras están representadas por símbolos que encarnan a los diferentes componentes de la carta natal. Por ejemplo: los planetas son los actores, los signos en que ellos están son los disfraces que utilizan para representar su papel, y las casas -que dependen de las coordenadas y de la hora de nacimiento de cada quién- son los distintos escenarios en donde los actores, cada uno con su vestimenta mitológica, ha de representar lo que está escrito en el libreto.",
-    "La carta natal personal está analizada en un principio, bajo los tres principales hechos que definen el libreto de cada quien, y que son: la fecha, el sitio y la hora de nacimiento. Una vez sabido esto, podemos entrar al estudio de la carta personal.",
-    "Y de los factores astrales, en los cuales me baso para hacer tu carta natal, los tres primeros y más importantes son:",
-    "1. La ubicación del Sol -que es tu esencia- en signo y casa.",
-    "2. Cuál es el signo que ascendía en el horizonte a la hora de tu nacimiento allá en las coordenadas geográficas donde lo hiciste, y que se conoce con el nombre de Ascendente -que representa tu personalidad-.",
-    "3. Y por último, el signo y la casa en donde está la Luna -que es el alma encarnada-, así como lo que significa en cuál de las ocho fases lunares estaba ella cuando naciste.",
-    "Por lo tanto, como en este estudio se analiza lo que se deriva de estos tres factores astrales, recuerda que, como \"elegiste\" tu propia carta astral antes de encarnar, como actor o actriz que ha de entrar al escenario de la vida con su libreto propio, las personas de los signos que aparezcan en ella, y que son tus compañeros de reparto, no son culpables de nada de lo que te suceda, porque tú los seleccionaste como actores y actrices con un papel fundamental para tu libreto de vida en el cual, en cambio, cada uno -incluyéndote a ti- sí es responsable de su actuación. Bajo TODOS los signos mencionados en este estudio, inevitablemente, tarde o temprano, llegarán al escenario de tu vida personas con las cuales hay asuntos inconclusos que tienes que resolver.",
-    "Una aclaración importante: se llama CÚSPIDE al punto o línea del inicio de una casa. SIEMPRE hay un signo que rige una cúspide, y el planeta que rija esa casa, rige lo que ella significa. Pero, a veces el signo puede quedar después de los 10 o 20 grados de un signo y, en tal caso, se dice que está en el segundo o tercer decanato de dicho signo. Como a cada decanato también lo rige un planeta -y los puedes ver graficados en colores en el círculo de afuera- se dice que hay que buscar en dónde se ubica el planeta regente de ese decanato, para encontrar más información acerca de cada casa zodiacal.",
-    "Antes de introducirme en el tema, quisiera decirte cuáles son, a mi entender, los doce mandamientos zodiacales. Toda la lista que leerás a continuación tiene que ver con tu carta natal, pero están resaltados los signos, luminarias, planetas y casas que más se involucran en esta descripción de tu carta astral natal."
-  ],
-  "mand_signos_intro": "He aquí, primero, los mandamientos de los signos zodiacales, que dependen del año y del mes en el cual naciste. Aquellos resaltados son los más importantes de tu carta natal.",
-  "mand_signos": {
-    "Aries": "Asegúrate de ser quien debes ser.",
-    "Tauro": "Que nada ni nadie se adueñe de ti.",
-    "Géminis": "Conoce a la otra persona que hay en ti.",
-    "Cáncer": "Siente con el alma quién eres en tu interior.",
-    "Leo": "Irradia la luz que eres desde tu interior.",
-    "Virgo": "Úsate como tu mejor herramienta.",
-    "Libra": "Mantente en armonía interna contigo.",
-    "Escorpio": "Vence y no alimentes lo que te domina.",
-    "Sagitario": "Pon la fe en ti mientras vas por el camino.",
-    "Capricornio": "Párate firme, mira lejos y no te quedes ahí.",
-    "Acuario": "Ama al prójimo y déjate amar por él.",
-    "Piscis": "Vive y vete en Paz, eres la Unidad Universal."
+  "cardinal": {
+   "titulo": "Cruz Cardinal",
+   "signos": [
+    "Aries",
+    "Cáncer",
+    "Libra",
+    "Capricornio"
+   ],
+   "mision": "Misión: naciste para iniciar, impulsar y poner en marcha los procesos de la vida. La cruz cardinal es la de la acción y el liderazgo: marca los comienzos de las estaciones y, con ellos, la capacidad de emprender, dirigir y abrir caminos que otros luego recorrerán. Tu aprendizaje está en sostener lo que inicias y en no atropellar a los demás con tu impulso.",
+   "representacion": {
+    "Aries": "Aries: perteneciente al elemento Fuego, abre el zodíaco con la acción pura. Representa el arranque, la iniciativa y el coraje; encarna la afirmación del yo, el ardor, la autoafirmación, la chispa que enciende, el deseo de ser el primero, el empuje, la espontaneidad, la franqueza, la impaciencia, el ímpetu, el instinto de conquista, el liderazgo natural, la valentía y la pura voluntad de existir. Su lección es iniciar sin atropellar y sostener lo que empieza.",
+    "Cáncer": "Cáncer: perteneciente al elemento Agua, inicia desde la emoción y el refugio. Representa la familia, las raíces y la memoria; encarna el afecto protector, el apego al hogar, la contención, la nostalgia, la nutrición, la sensibilidad, la ternura, la capacidad de cuidar y de hacer nido, la intuición emocional, el sentido de pertenencia y la defensa de los suyos. Su lección es cuidar sin ahogar y abrir caminos desde el sentir.",
+    "Libra": "Libra: perteneciente al elemento Aire, inicia desde el vínculo con el otro. Representa el equilibrio, la justicia y la armonía; encarna la diplomacia, la estética, la búsqueda del acuerdo, la cortesía, la elegancia, la indecisión, la mediación, la necesidad de compañía, la cooperación, el sentido de lo bello y el amor por la paz. Su lección es decidir sin perderse en el otro y liderar desde el consenso.",
+    "Capricornio": "Capricornio: perteneciente al elemento Tierra, inicia desde la estructura y la meta a largo plazo. Representa la ambición, la disciplina y la responsabilidad; encarna el ascenso, la autoridad, la constancia, la madurez temprana, la paciencia, el pragmatismo, la prudencia, el sentido del deber, la seriedad, la escalada a la cima y la construcción paciente. Su lección es alcanzar la cumbre sin volverse frío ni solitario."
+   },
+   "cierre": "Observa que los cuatro comparten la urgencia de empezar, pero cada uno inicia desde un lugar distinto: Aries desde el yo, Cáncer desde el alma, Libra desde el otro y Capricornio desde la meta. Por eso a un Aries le cuesta la paciencia de Capricornio, y a Libra, la soledad de la cabra en su roca. Formar esta cruz es aprender a iniciar junto a los demás y no solo por delante de ellos."
   },
-  "mand_casas_intro": "Ahora, he aquí los mandamientos de las casas zodiacales, que dependen de la hora y coordenadas geográficas en las cuales naciste. Esto es lo más personal de tu libreto terrenal y que muchas veces tengo que repetir su significado, porque los signos te conectan con lo universal y las casas con los sucesos que has de vivir en tu existencia planetaria. Aquellas resaltadas son las más importantes de tu carta natal.",
-  "mand_casas": {
-    "Casa I": "Logra el dominio sobre tu propio ser.",
-    "Casa II": "Aprende a trascender todo lo material.",
-    "Casa III": "Discierne qué es verdad y qué es mentira.",
-    "Casa IV": "Echa fuertes raíces, pero sin quedarte ahí.",
-    "Casa V": "Cuida con amor tu esencia y dignidad humana.",
-    "Casa VI": "Sé útil a ti y a los demás sabiendo dar la mano.",
-    "Casa VII": "Jamás juzgues a alguien, ponte en su lugar.",
-    "Casa VIII": "Mantente en una constante transformación.",
-    "Casa IX": "Encuentra, comprende y sigue tu propia verdad.",
-    "Casa X": "Aprende a arrodillarte ante las leyes universales.",
-    "Casa XI": "Sé un verdadero ser humano ante el prójimo.",
-    "Casa XII": "Mantén tu desnudez ante la divinidad interna."
+  "mutable": {
+   "titulo": "Cruz Mutable",
+   "signos": [
+    "Géminis",
+    "Virgo",
+    "Sagitario",
+    "Piscis"
+   ],
+   "mision": "Misión: naciste para adaptar, comunicar y transformar lo que las otras cruces inician y consolidan. La cruz mutable es la de la flexibilidad y el aprendizaje: cierra los ciclos de las estaciones y prepara el terreno para lo nuevo. Tu aprendizaje está en no dispersarte y en darle un rumbo consciente a tu enorme versatilidad.",
+   "representacion": {
+    "Géminis": "Géminis: perteneciente al elemento Aire, adapta a través de la palabra y el intercambio. Representa la comunicación, la curiosidad y el aprendizaje; encarna la agilidad mental, la dualidad, la dispersión, la elocuencia, la inquietud, el ingenio, el juego de las ideas, la movilidad, la sociabilidad, la versatilidad y el eterno aprendiz. Su lección es profundizar en lugar de rozar muchos temas a la vez.",
+    "Virgo": "Virgo: perteneciente al elemento Tierra, adapta a través del servicio y el análisis. Representa el trabajo, el método y la mejora; encarna la crítica, el detalle, la discriminación, la eficiencia, el escrúpulo, la higiene, la laboriosidad, la modestia, el perfeccionismo, el cuidado de la salud, la utilidad y el afán de ordenarlo todo. Su lección es servir sin esclavizarse en la autocrítica.",
+    "Sagitario": "Sagitario: perteneciente al elemento Fuego, adapta a través de la búsqueda de sentido. Representa la expansión, la fe y el viaje; encarna el optimismo, la aventura, la filosofía, la franqueza, la generosidad, la honestidad, el idealismo, la libertad, la visión amplia, el entusiasmo y el afán de saber más allá de lo conocido. Su lección es comprometerse con un rumbo y no huir siempre hacia el horizonte.",
+    "Piscis": "Piscis: perteneciente al elemento Agua, cierra el zodíaco disolviendo las fronteras. Representa la compasión, la espiritualidad y la entrega; encarna la empatía, la ensoñación, la fe mística, la impresionabilidad, la inspiración, la intuición, la renuncia, el sacrificio, la sensibilidad artística, la ternura universal y la unión con el Todo. Su lección es poner límites sanos a su infinita permeabilidad."
+   },
+   "cierre": "Los cuatro adaptan y transforman, pero cada uno fluye distinto: Géminis con la mente, Virgo con el trabajo, Sagitario con la fe y Piscis con el alma. Por eso Virgo busca el orden que Piscis disuelve, y Sagitario la libertad que Géminis dispersa. Formar esta cruz es aprender a cambiar sin perder el rumbo ni dispersar la propia energía."
+  }
+ },
+ "elementos": {
+  "tierra": {
+   "titulo": "Elemento Tierra",
+   "signos": [
+    "Tauro",
+    "Virgo",
+    "Capricornio"
+   ],
+   "mision": "Misión del elemento Tierra: naciste para adquirir una forma correcta y precisa, dentro del mundo de la materia corruptible y transformadora. Como la Tierra es el elemento más sólido debes aprender a detenerte y a mantener la acción, echando raíces en alguna parte, evitando sufrir por los cambios que te corresponda hacer en la vida; dicha actitud te ha de servir para guardar la energía para el mañana. Como Tierra que eres, debes mantener las cosas estables y aprender a cuándo sí y cuándo no, resistirte a las ideas innovadoras. Porque es, por medio de dichas ideas que debes sembrar y recoger el fruto de tus esfuerzos, simbolizando tu capacidad de resistencia. Con esos frutos debes ser muy generoso y jovial. Durante tu existencia has de trabajar constantemente y con tesón, para asegurar tu vida acumulando y aumentando tu fortaleza y encontrando riqueza en el mundo. Pero una advertencia: debes vencer el apego a través del servicio a los demás.",
+   "personaje": "Personaje Tipo: el artesano, el comerciante, el constructor, el organizador, el personaje material, el político (Capricornio), el poseedor, el proveedor, el servidor concienzudo, el trabajador realista.",
+   "frase": "Frase: deberías estar aprendiendo a hacer dinero. Espera un momento, te estás pasando de la raya. Existo luego pienso. ¿Por qué estás perdiendo el tiempo con esas bobadas?",
+   "descripcion": "Descripción General: el elemento Tierra, que es llamado el Triángulo de la Autodisciplina, está compuesto por tres signos: Tauro, Virgo y Capricornio. Tiene relación con la capacidad que tiene tu organismo para defenderse sacando ventaja de las reservas energéticas. Tauro rige el cuello, Virgo los intestinos y Capricornio los huesos y, particularmente, las rodillas.",
+   "representacion": {
+    "Tauro": "Tauro: es la tierra fértil de la primavera, pero duramente laborada por medio del trabajo físico. Simboliza la tierra plena de riquezas, con flores y frutos que encarnan personas caracterizadas por la afirmación, el aumento de las posesiones, la certeza de las situaciones materiales, la conservación, la constancia y la dedicación; también encarna el descanso, el dogmatismo, el esmero, la estabilidad, la estrechez mental, las finanzas personales, el horror a perder lo que posee, las ideas fijas, la lentitud, el materialismo, la obediencia, la obstinación, los pensamientos concretos, la permanencia y la perseverancia, lo poco cambiante, el poder curativo, la posesividad excesiva, la renta, la resistencia, la riqueza, la seguridad y el tesón.",
+    "Virgo": "Virgo: es la tierra productiva del verano, cultivada, cosechada y almacenada muy inteligentemente, por eso encarna la parcela ya trabajada y ahora estéril, motivo por el cual puede vivir de las reservas guardadas en la alacena (como lo hace la ardilla, uno de los laboriosos animales que tipifican al signo). Virgo encarna la actividad individual de personas identificadas con el andar comprobando todo; y, como le interesa más ser perfectos en su desempeño de la rutina diaria, se les acusa de carencia de afectos por tener horror a los problemas sentimentales. También se asocia con la crítica, el desprendimiento, la discriminación, el escepticismo, los estudios exactos, el extremismo, el horror al desorden, el intelecto y la lógica objetiva, la investigación, la laboriosidad, las matemáticas y la rigidez en general.",
+    "Capricornio": "Capricornio: es símbolo del Sol que retoma su curso anual en el solsticio de invierno; época en la cual la tierra esconde fatal e interiormente sus secretos, tomando el tiempo un valor de eternidad. Por eso se dice que las personas Capricornio nacen ya viejas; es decir, que son muy maduras desde la niñez. Capricornio, la tierra dura y fría del invierno, es alegoría del atesoramiento de riquezas mentales, de la actividad social, la ambición, éxitos en la carrera profesional -que se estudia en la casa X-; y con este éxito la persona llega a adquirir el honor mediante la acción que caracteriza a individuos asociados con el aislamiento, la concentración, el construir, la contracción, la desconfianza hacia los demás, el dictar leyes -buenos abogados-. Capricornio, siendo quien mejor sabe utilizar los recursos materiales, es el más denso, práctico y sutil de los signos del elemento Tierra. Nacen con el objetivo de edificar -buenos arquitectos-, gracias a su espíritu práctico. Les encantan los hechos concretos, los intereses personales, el liderazgo, la lógica y el razonar como una persona de mucha experiencia. Algunos se dedican al manejo de masas a través de la política, el materialismo o el medio ambiente externo personal. Pero una advertencia en su psicología: Capricornio es el signo de la soledad tipo cabra subida en su roca."
+   }
   },
-  "mand_planetas_intro": "Y, por último, los mandamientos de los principales actores y actrices mitológicos de tu carta natal, es decir, las luminarias, planetas y algunos focos de energía. Aquellos resaltados son los más importantes de tu carta natal.",
-  "mand_planetas": {
-    "Sol": "Fluye a través de lo que tienes que ser.",
-    "Luna": "Alimenta bien tu alma en todo sentido.",
-    "Mercurio": "Conoce quién eres en todo momento.",
-    "Venus": "Mantén afinidad con el mundo y los demás.",
-    "Tierra": "Aprende a ser tu propia base personal.",
-    "Marte": "Expande y canaliza la energía que eres.",
-    "Júpiter": "Expande la conciencia superior que eres.",
-    "Saturno": "Haz tu tarea comprendiendo y sin renegar.",
-    "Quirón": "Da la mano a otros, sánalos y déjate sanar.",
-    "Urano": "Abre tu mente y libérate de lo que no eres.",
-    "Neptuno": "Navega espiritualmente en tu interior.",
-    "Plutón": "No alimentes a ninguna bestia interna.",
-    "Nódulo Lunar Norte": "No detengas tu andar consciente.",
-    "Nódulo Lunar Sur": "Corta con el pasado que cargas.",
-    "Luna Negra": "No te dejes intoxicar por nadie.",
-    "Rueda de la Fortuna": "Sé la felicidad para compartirla."
+  "fuego": {
+   "titulo": "Elemento Fuego",
+   "signos": [
+    "Aries",
+    "Leo",
+    "Sagitario"
+   ],
+   "mision": "Misión del elemento Fuego: naciste para irradiar energía, entusiasmo y voluntad. El Fuego es el elemento de la acción inspirada: enciende, ilumina y da calor, pero debe aprender a no consumirse ni consumir a los demás. Tu tarea es canalizar esa fuerza vital hacia propósitos que te trasciendan.",
+   "personaje": "Personaje Tipo: el aventurero, el conquistador, el creador, el deportista, el guerrero, el guía inspirador, el idealista, el líder, el pionero, el protagonista.",
+   "frase": "Frase: ¡vamos, atrévete! El mundo es de quien se anima. Primero actúo y después pienso. ¿Para qué esperar si puedo empezar ya?",
+   "descripcion": "Descripción General: el elemento Fuego, llamado el Triángulo del Espíritu o de la Inspiración, está compuesto por tres signos: Aries, Leo y Sagitario. Tiene relación con la energía vital, el entusiasmo y la capacidad de emprender e irradiar. Aries rige la cabeza, Leo el corazón y la espalda, y Sagitario las caderas y los muslos.",
+   "representacion": {
+    "Aries": "Aries: es el fuego naciente de la primavera, la chispa que enciende el zodíaco. Encarna el arranque, el coraje, la autoafirmación, el deseo de conquista, el empuje, la espontaneidad, la franqueza, la impaciencia, el ímpetu, la iniciativa, el instinto, el liderazgo instintivo, la valentía y el afán de ser siempre el primero. Es el pionero que abre el camino que otros recorrerán.",
+    "Leo": "Leo: es el fuego sostenido del verano, el Sol en su plenitud. Encarna la generosidad, el orgullo, la creatividad, la nobleza, el dramatismo, la dignidad, la lealtad a un principio, el calor humano, la fidelidad, el lujo, la necesidad de brillar y de ser reconocido, el reinar y la voluntad firme. Es el corazón que irradia luz y busca ser el centro.",
+    "Sagitario": "Sagitario: es el fuego que se expande hacia el horizonte al final del otoño. Encarna el optimismo, la fe, la aventura, la filosofía, la franqueza, la generosidad, la honestidad, el idealismo, la libertad, la visión amplia, el entusiasmo contagioso y el afán de ir más allá. Es el viajero y el maestro que busca el sentido último de las cosas."
+   }
   },
-  "mand_cierre": "Ahora bien, con las tres frases más resaltadas, que son las que te incumben por tu signo solar, por la casa que ocupa tu Sol natal y por quien lo rige a él, construye una frase y aplícala a tu vida diaria.",
-  "puente_cruz": "Sabido esto, comienzo a describir los principales componentes de tu carta astral natal; recordándote primero, que aquellos signos mencionados pertenecen a personas que escogiste como compañeras y compañeros de escenario en tu libreto de vida; obviamente, cada una de ellas aparecerá en algún momento de tu existencia con su propio libreto, para compartirlo con el tuyo en esta vida. Sólo tú sabes qué papel han de jugar en tu existencia las personas que salgan mencionadas bajo los signos que has de encontrar en el estudio de tu carta natal, porque los escogiste -a todos ellos- antes de encarnar.",
-  "cruces": {
-    "fija": {
-      "titulo": "Cruz Fija",
-      "signos": ["Tauro", "Leo", "Escorpio", "Acuario"],
-      "mision": "Misión: naciste para concentrar el poder que hay en ti mismo, persistiendo en lograr alguna idea o propósito específico que quieres lograr en esta vida. Para ello no debes resistirte al cambio, porque tu signo es el más renuente a cambiar de posición en la vida. Por eso se dice que es el signo de la terquedad y la insistencia.",
-      "representacion": {
-        "Tauro": "Tauro: perteneciendo al elemento Tierra, representa al signo más saludable de todo el zodíaco; es decir, se enferma, pero supera cualquier enfermedad. Encarna el saberse alimentar, el apego y el desarrollo material, las finanzas, los bienes económicos y materiales, la conservación, lo consistente, la buena vida y la comodidad, la energía constructiva, el placer de los sentidos, las posesiones, la seguridad, el tener siempre la razón, las tareas concretas, la tenacidad y lo buen vividor con un tren de vida costoso.",
-        "Leo": "Leo: su elemento es el Fuego que representa el amor fogoso, el apego al orgullo, las apuestas y el juego, la banca, ser el centro de los demás, la especulación, la fidelidad a un principio, individualidad, el lujo, el poder conservado, el prestigio, el reinar y la voluntad.",
-        "Escorpio": "Escorpio: este es el signo complemento de Tauro, perteneciente al elemento Agua. Representa el amor o atracción sexual, el apego emocional, los deseos, el dinero ajeno, la fidelidad a un amor o a unos sentimientos, la fuerza psíquica, la necesidad del vínculo emocional, personas atadas a sus sentimientos y a los placeres, la tenacidad, las tentaciones, la toma de conciencia a través de crisis, la transformación, los trastornos emocionales. Todo ello simbolizando el sacrificio que tienes que hacer de la ilusión a la realidad, basado en la experiencia.",
-        "Acuario": "Acuario: su elemento es el Aire que representa la mente universal, el apego a las ideas y principios, el concentrar los valores dentro de las instituciones culturales, los ideales amplios, la igualdad humana, lo inconvencional, la independencia, la innovación, el intelecto desarrollado, la inventiva científica, la liberación por la mente, la luz de la conciencia universal, las relaciones desapegadas."
-      },
-      "cierre": "A su vez, alguien Acuario no ansía la fastuosidad de alguien Tauro o Leo. Igualmente, los signos de Agua y Fuego de esta cruz, es decir, Leo y Escorpio -el signo más importante de la cruz-, no tienen tanta facilidad para adaptarse a lo transitorio como el resto de signos de dichos elementos. A ningún signo de la cruz fija le gusta renunciar a las ideas infantiles, tipo navidad; y, menos que a ninguno, a Escorpio."
-    },
-    "cardinal": {
-      "titulo": "Cruz Cardinal",
-      "signos": ["Aries", "Cáncer", "Libra", "Capricornio"],
-      "mision": "Misión: naciste para iniciar, impulsar y poner en marcha los procesos de la vida. La cruz cardinal es la de la acción y el liderazgo: marca los comienzos de las estaciones y, con ellos, la capacidad de emprender, dirigir y abrir caminos que otros luego recorrerán. Tu aprendizaje está en sostener lo que inicias y en no atropellar a los demás con tu impulso.",
-      "representacion": {},
-      "cierre": ""
-    },
-    "mutable": {
-      "titulo": "Cruz Mutable",
-      "signos": ["Géminis", "Virgo", "Sagitario", "Piscis"],
-      "mision": "Misión: naciste para adaptar, comunicar y transformar lo que las otras cruces inician y consolidan. La cruz mutable es la de la flexibilidad y el aprendizaje: cierra los ciclos de las estaciones y prepara el terreno para lo nuevo. Tu aprendizaje está en no dispersarte y en darle un rumbo consciente a tu enorme versatilidad.",
-      "representacion": {},
-      "cierre": ""
-    }
+  "aire": {
+   "titulo": "Elemento Aire",
+   "signos": [
+    "Géminis",
+    "Libra",
+    "Acuario"
+   ],
+   "mision": "Misión del elemento Aire: naciste para pensar, comunicar y relacionar. El Aire es el elemento de la mente y de los vínculos: conecta personas e ideas, y da perspectiva. Tu tarea es bajar las ideas a la tierra y no quedarte solo en la teoría.",
+   "personaje": "Personaje Tipo: el comunicador, el diplomático, el intelectual, el mediador, el periodista, el pensador, el relacionador, el social, el teórico, el visionario.",
+   "frase": "Frase: hablemos y entendámonos. ¿Y tú qué opinas? Pienso, luego existo. Todo se puede resolver conversando.",
+   "descripcion": "Descripción General: el elemento Aire, llamado el Triángulo de las Relaciones o de la Mente, está compuesto por tres signos: Géminis, Libra y Acuario. Tiene relación con el pensamiento, la comunicación y los vínculos. Géminis rige los brazos, las manos y los pulmones; Libra los riñones; y Acuario las pantorrillas y la circulación.",
+   "representacion": {
+    "Géminis": "Géminis: es el aire móvil de la primavera que todo lo comunica. Encarna la curiosidad, la agilidad mental, la dualidad, el don de la palabra, el aprendizaje constante, la versatilidad, el ingenio, la sociabilidad, el intercambio de ideas, la inquietud y la juventud eterna. Es el mensajero que conecta a unos con otros.",
+    "Libra": "Libra: es el aire equilibrado del otoño que busca la armonía. Encarna el equilibrio, la justicia, la estética, la relación, la diplomacia, el acuerdo, la cortesía, el sentido de lo bello, la cooperación, la indecisión y la necesidad del otro. Es el mediador que pesa cada platillo de la balanza.",
+    "Acuario": "Acuario: es el aire frío e innovador del invierno. Encarna la mente universal, los ideales amplios, la independencia, la originalidad, la fraternidad, la innovación científica, el desapego, la igualdad humana, lo inconvencional y la visión de futuro. Es el reformador que piensa en el bien de todos."
+   }
   },
-  "elementos": {
-    "tierra": {
-      "titulo": "Elemento Tierra",
-      "signos": ["Tauro", "Virgo", "Capricornio"],
-      "mision": "Misión del elemento Tierra: naciste para adquirir una forma correcta y precisa, dentro del mundo de la materia corruptible y transformadora. Como la Tierra es el elemento más sólido debes aprender a detenerte y a mantener la acción, echando raíces en alguna parte, evitando sufrir por los cambios que te corresponda hacer en la vida; dicha actitud te ha de servir para guardar la energía para el mañana. Como Tierra que eres, debes mantener las cosas estables y aprender a cuándo sí y cuándo no, resistirte a las ideas innovadoras. Porque es, por medio de dichas ideas que debes sembrar y recoger el fruto de tus esfuerzos, simbolizando tu capacidad de resistencia. Con esos frutos debes ser muy generoso y jovial. Durante tu existencia has de trabajar constantemente y con tesón, para asegurar tu vida acumulando y aumentando tu fortaleza y encontrando riqueza en el mundo. Pero una advertencia: debes vencer el apego a través del servicio a los demás.",
-      "personaje": "Personaje Tipo: el artesano, el comerciante, el constructor, el organizador, el personaje material, el político (Capricornio), el poseedor, el proveedor, el servidor concienzudo, el trabajador realista.",
-      "frase": "Frase: deberías estar aprendiendo a hacer dinero. Espera un momento, te estás pasando de la raya. Existo luego pienso. ¿Por qué estás perdiendo el tiempo con esas bobadas?",
-      "descripcion": "Descripción General: el elemento Tierra, que es llamado el Triángulo de la Autodisciplina, está compuesto por tres signos: Tauro, Virgo y Capricornio. Tiene relación con la capacidad que tiene tu organismo para defenderse sacando ventaja de las reservas energéticas. Tauro rige el cuello, Virgo los intestinos y Capricornio los huesos y, particularmente, las rodillas.",
-      "representacion": {
-        "Tauro": "Tauro: es la tierra fértil de la primavera, pero duramente laborada por medio del trabajo físico. Simboliza la tierra plena de riquezas, con flores y frutos que encarnan personas caracterizadas por la afirmación, el aumento de las posesiones, la certeza de las situaciones materiales, la conservación, la constancia y la dedicación; también encarna el descanso, el dogmatismo, el esmero, la estabilidad, la estrechez mental, las finanzas personales, el horror a perder lo que posee, las ideas fijas, la lentitud, el materialismo, la obediencia, la obstinación, los pensamientos concretos, la permanencia y la perseverancia, lo poco cambiante, el poder curativo, la posesividad excesiva, la renta, la resistencia, la riqueza, la seguridad y el tesón.",
-        "Virgo": "Virgo: es la tierra productiva del verano, cultivada, cosechada y almacenada muy inteligentemente, por eso encarna la parcela ya trabajada y ahora estéril, motivo por el cual puede vivir de las reservas guardadas en la alacena (como lo hace la ardilla, uno de los laboriosos animales que tipifican al signo). Virgo encarna la actividad individual de personas identificadas con el andar comprobando todo; y, como le interesa más ser perfectos en su desempeño de la rutina diaria, se les acusa de carencia de afectos por tener horror a los problemas sentimentales. También se asocia con la crítica, el desprendimiento, la discriminación, el escepticismo, los estudios exactos, el extremismo, el horror al desorden, el intelecto y la lógica objetiva, la investigación, la laboriosidad, las matemáticas y la rigidez en general.",
-        "Capricornio": "Capricornio: es símbolo del Sol que retoma su curso anual en el solsticio de invierno; época en la cual la tierra esconde fatal e interiormente sus secretos, tomando el tiempo un valor de eternidad. Por eso se dice que las personas Capricornio nacen ya viejas; es decir, que son muy maduras desde la niñez. Capricornio, la tierra dura y fría del invierno, es alegoría del atesoramiento de riquezas mentales, de la actividad social, la ambición, éxitos en la carrera profesional -que se estudia en la casa X-; y con este éxito la persona llega a adquirir el honor mediante la acción que caracteriza a individuos asociados con el aislamiento, la concentración, el construir, la contracción, la desconfianza hacia los demás, el dictar leyes -buenos abogados-. Capricornio, siendo quien mejor sabe utilizar los recursos materiales, es el más denso, práctico y sutil de los signos del elemento Tierra. Nacen con el objetivo de edificar -buenos arquitectos-, gracias a su espíritu práctico. Les encantan los hechos concretos, los intereses personales, el liderazgo, la lógica y el razonar como una persona de mucha experiencia. Algunos se dedican al manejo de masas a través de la política, el materialismo o el medio ambiente externo personal. Pero una advertencia en su psicología: Capricornio es el signo de la soledad tipo cabra subida en su roca."
-      }
-    },
-    "fuego": {
-      "titulo": "Elemento Fuego",
-      "signos": ["Aries", "Leo", "Sagitario"],
-      "mision": "Misión del elemento Fuego: naciste para irradiar energía, entusiasmo y voluntad. El Fuego es el elemento de la acción inspirada: enciende, ilumina y da calor, pero debe aprender a no consumirse ni consumir a los demás. Tu tarea es canalizar esa fuerza vital hacia propósitos que te trasciendan.",
-      "personaje": "",
-      "frase": "",
-      "descripcion": "",
-      "representacion": {}
-    },
-    "aire": {
-      "titulo": "Elemento Aire",
-      "signos": ["Géminis", "Libra", "Acuario"],
-      "mision": "Misión del elemento Aire: naciste para pensar, comunicar y relacionar. El Aire es el elemento de la mente y de los vínculos: conecta personas e ideas, y da perspectiva. Tu tarea es bajar las ideas a la tierra y no quedarte solo en la teoría.",
-      "personaje": "",
-      "frase": "",
-      "descripcion": "",
-      "representacion": {}
-    },
-    "agua": {
-      "titulo": "Elemento Agua",
-      "signos": ["Cáncer", "Escorpio", "Piscis"],
-      "mision": "Misión del elemento Agua: naciste para sentir, contener y transformar a través de la emoción. El Agua es el elemento del alma: nutre, disuelve y une en profundidad. Tu tarea es aprender a poner cauce a tus emociones para que sean fuente de vida y no inundación.",
-      "personaje": "",
-      "frase": "",
-      "descripcion": "",
-      "representacion": {}
-    }
-  },
-  "cierre_preambulo": "Conociendo esta generalidad acerca de la cruz y el elemento al cual perteneces, lo que voy a escribir a continuación no tiene nada que ver con la edad actual sino con la totalidad de tu vida; es decir, que en algún momento de tu existencia se cumplirá lo dicho aquí. Si alguna descripción no cuadra con lo que leas aquí, recuerda no juzgar al gusano porque no puede volar… ¡Ya lo harás!",
-  "puente_interpretacion": "Ahora voy a profundizar en el estudio de tu esencia solar que hace un eje con la Tierra."
+  "agua": {
+   "titulo": "Elemento Agua",
+   "signos": [
+    "Cáncer",
+    "Escorpio",
+    "Piscis"
+   ],
+   "mision": "Misión del elemento Agua: naciste para sentir, contener y transformar a través de la emoción. El Agua es el elemento del alma: nutre, disuelve y une en profundidad. Tu tarea es aprender a poner cauce a tus emociones para que sean fuente de vida y no inundación.",
+   "personaje": "Personaje Tipo: el artista, el cuidador, el intuitivo, el místico, el psicólogo, el sanador, el sensible, el soñador, el terapeuta, el vidente del alma.",
+   "frase": "Frase: siénteme, no me expliques. El corazón tiene razones que la razón no entiende. Lo esencial es invisible a los ojos.",
+   "descripcion": "Descripción General: el elemento Agua, llamado el Triángulo del Alma o de las Emociones, está compuesto por tres signos: Cáncer, Escorpio y Piscis. Tiene relación con la vida emocional, la intuición y la memoria profunda. Cáncer rige el estómago y los pechos, Escorpio los órganos sexuales y de eliminación, y Piscis los pies y el sistema linfático.",
+   "representacion": {
+    "Cáncer": "Cáncer: es el agua tibia del verano que nutre y protege. Encarna la familia, las raíces, la memoria, el afecto protector, el hogar, la contención, la sensibilidad, la intuición emocional, la nostalgia, el cuidado de los suyos y el instinto de hacer nido. Es la madre simbólica que ampara y alimenta.",
+    "Escorpio": "Escorpio: es el agua profunda y estancada del otoño que todo lo transforma. Encarna la intensidad, la pasión, el deseo, la crisis, la regeneración, el poder, el misterio, la fuerza psíquica, el apego emocional, la toma de conciencia a través del dolor y la capacidad de morir y renacer. Es el signo más importante del Triángulo del Alma.",
+    "Piscis": "Piscis: es el agua que se funde con el océano al cerrar el zodíaco. Encarna la compasión, la espiritualidad, la entrega, la ensoñación, la empatía, la inspiración, el sacrificio, la sensibilidad artística, la renuncia, la fe mística y la unión con el Todo Absoluto. Es el alma que disuelve toda frontera."
+   }
+  }
+ },
+ "cierre_preambulo": "Conociendo esta generalidad acerca de la cruz y el elemento al cual perteneces, lo que voy a escribir a continuación no tiene nada que ver con la edad actual sino con la totalidad de tu vida; es decir, que en algún momento de tu existencia se cumplirá lo dicho aquí. Si alguna descripción no cuadra con lo que leas aquí, recuerda no juzgar al gusano porque no puede volar… ¡Ya lo harás!",
+ "puente_interpretacion": "Ahora voy a profundizar en el estudio de tu esencia solar que hace un eje con la Tierra."
 }

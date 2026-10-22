@@ -312,6 +312,13 @@ def build_akashic(chart):
     s12_en = h12.get('sign', 'Pisces')
     s12_es = h12.get('sign_es', s12_en)
 
+    # Cruz y elemento del signo de la Casa XII (personas kármicas / de Casa XII)
+    prem = _preamble()
+    cz_blk = prem.get('cruces', {}).get(_CRUZ.get(s12_en, 'fija'), {})
+    el_blk = prem.get('elementos', {}).get(_ELEM.get(s12_en, 'tierra'), {})
+    cross_signs = [s for s in cz_blk.get('signos', []) if s != s12_es]
+    elem_signs = [s for s in el_blk.get('signos', []) if s != s12_es]
+
     # Regente del signo de la Casa XII
     ruler_name = _REGENTE.get(s12_en, 'Neptuno')
     ruler_p = by_name.get(ruler_name)
@@ -329,6 +336,8 @@ def build_akashic(chart):
 
     # Conjuntos en rojo (signos, casas y planetas involucrados con la Casa XII)
     red_signs = {s12_es}
+    red_signs.update(cross_signs)   # signos de la cruz de la Casa XII
+    red_signs.update(elem_signs)    # signos del elemento de la Casa XII
     red_houses = {'Casa XII'}
     red_planets = set()
     if ruler_p:
@@ -429,6 +438,39 @@ def build_akashic(chart):
         if paras:
             sections.append(("El regente del decanato de tu Casa XII", [(title, paras)]))
 
+    # 5. La cruz y el elemento del signo de tu Casa XII (personas kármicas)
+    ce_items = []
+    if cz_blk:
+        lst = (", ".join(cross_signs[:-1]) + " y " + cross_signs[-1]) if len(cross_signs) > 1 else "".join(cross_signs)
+        paras = ["El signo en la cúspide de tu Casa XII, %s, pertenece a la %s. Por eso, "
+                 "las personas más importantes de tu vida —aquellas con una relación "
+                 "kármica o de Casa XII contigo— suelen llegar bajo los signos de esa "
+                 "misma cruz: %s. Comprende primero qué es esta cruz y luego con quiénes "
+                 "la formas." % (s12_es, cz_blk.get('titulo', 'cruz zodiacal'), lst)]
+        if cz_blk.get('mision'):
+            paras.append(cz_blk['mision'])
+        for sname, stext in cz_blk.get('representacion', {}).items():
+            if sname != s12_es:
+                paras.append(stext)
+        if cz_blk.get('cierre'):
+            paras.append(cz_blk['cierre'])
+        ce_items.append(("La cruz de %s: %s" % (s12_es, cz_blk.get('titulo', '')), paras))
+    if el_blk:
+        elnom = el_blk.get('titulo', 'Elemento').replace('Elemento ', '')
+        paras = ["%s es un signo del elemento %s. Las personas de los otros signos de "
+                 "este elemento —%s— potenciarán tu energía y tendrán contigo una "
+                 "afinidad natural que te impulsa. Observa qué significa este elemento."
+                 % (s12_es, elnom, " y ".join(elem_signs))]
+        for fld in ('mision', 'personaje', 'frase', 'descripcion'):
+            if el_blk.get(fld):
+                paras.append(el_blk[fld])
+        for sname, stext in el_blk.get('representacion', {}).items():
+            if sname != s12_es:
+                paras.append(stext)
+        ce_items.append(("El elemento de %s: %s" % (s12_es, elnom), paras))
+    if ce_items:
+        sections.append(("La cruz y el elemento de tu Casa XII", ce_items))
+
     return pre, sections
 
 
@@ -440,6 +482,50 @@ _ELEM = {"Aries": "fuego", "Leo": "fuego", "Sagittarius": "fuego",
          "Taurus": "tierra", "Virgo": "tierra", "Capricorn": "tierra",
          "Gemini": "aire", "Libra": "aire", "Aquarius": "aire",
          "Cancer": "agua", "Scorpio": "agua", "Pisces": "agua"}
+
+# Nombres y significado general de las doce casas (sección educativa)
+_CASA_NOMBRE = ["La casa del Yo", "La casa de los recursos", "La casa de la mente",
+    "La casa del hogar", "La casa de la creación", "La casa del servicio",
+    "La casa del otro", "La casa de la transformación", "La casa del sentido",
+    "La casa de la vocación", "La casa de los ideales", "La casa del alma"]
+_CASAS_12 = [
+    "Casa I (el Ascendente). Es la puerta por la que entras al mundo: tu identidad, "
+    "tu cuerpo, tu temperamento y la primera impresión que das. Marca cómo te "
+    "presentas y el modo en que inicias todo. Aquí empieza a leerse tu carta.",
+    "Casa II. Es el sector de lo que es tuyo: el dinero, las posesiones, los recursos "
+    "propios y, sobre todo, tus valores y tu autoestima material. Habla de cómo "
+    "ganas, conservas y disfrutas aquello que consideras seguro y propio.",
+    "Casa III. La mente concreta y el entorno cercano: la comunicación, el aprendizaje, "
+    "los estudios breves, los hermanos, los vecinos y los desplazamientos cortos. Es "
+    "cómo piensas, hablas y conectas con lo que te rodea cada día.",
+    "Casa IV. Las raíces y el hogar: la familia, los ancestros, la base emocional y el "
+    "lugar íntimo donde te sientes a salvo. Es el cimiento sobre el que se construye "
+    "todo lo demás y también el final de los ciclos.",
+    "Casa V. La casa de la creación y el disfrute: los hijos, el romance, el juego, el "
+    "arte y todo aquello que nace de ti y lleva tu sello. Es el placer de crear y de "
+    "expresar quién eres sin miedo.",
+    "Casa VI. El trabajo cotidiano, la salud, las rutinas y el servicio. Es cómo "
+    "cuidas tu cuerpo y tu día a día, cómo sirves a los demás y qué hábitos sostienen "
+    "—o desgastan— tu bienestar.",
+    "Casa VII. La casa del otro: la pareja, las asociaciones, los contratos y los "
+    "vínculos de igual a igual. Aquí se refleja lo que buscas en los demás y aquello "
+    "que proyectas sobre quienes eliges a tu lado.",
+    "Casa VIII. La transformación profunda: la sexualidad, las crisis, la muerte y el "
+    "renacimiento, los recursos compartidos, las herencias y lo oculto. Es donde "
+    "mueres a lo viejo para renacer renovado.",
+    "Casa IX. La mente superior: la filosofía, las creencias, los estudios profundos, "
+    "los viajes largos y el extranjero. Es tu búsqueda de sentido y la visión amplia "
+    "que te hace crecer más allá de lo conocido.",
+    "Casa X (el Medio Cielo). La vocación y la cima: la carrera, el estatus, la misión "
+    "social y la figura pública que proyectas. Es aquello por lo que quieres ser "
+    "reconocido y el fruto más visible de tu vida.",
+    "Casa XI. Los ideales y la comunidad: los amigos, los grupos, los proyectos y las "
+    "aspiraciones de futuro. Es dónde te unes a otros para soñar en grande y aquello "
+    "que esperas construir junto a los demás.",
+    "Casa XII. La casa del alma: lo inconsciente, lo kármico, la entrega, la "
+    "espiritualidad y lo que traes de antes. Es tu mundo interior más profundo, donde "
+    "se disuelve el ego y se cierran y abren los grandes ciclos.",
+]
 
 
 # ── Secciones interpretativas ───────────────────────────────────────────
@@ -486,6 +572,24 @@ def build_sections(chart, chart_type='natal', house_key='house', aspects=None):
     if items:
         sections.append((PL_HEAD.get(chart_type, PL_HEAD['natal']), items))
 
+    # El regente de la carta: el planeta que rige el Ascendente (el "capitán")
+    asc = chart.get('angles', {}).get('asc', {})
+    asc_en = asc.get('sign')
+    asc_es = asc.get('sign_es', asc_en)
+    ruler_name = _REGENTE.get(asc_en)
+    rp = next((p for p in chart['planets'] if p.get('name') == ruler_name), None)
+    if rp and chart_type != 'transit':
+        rparas = ["El regente de tu Ascendente es el planeta más importante de toda tu "
+                  "carta: es el capitán del barco, quien marca el rumbo de tu vida. Tu "
+                  "Ascendente está en %s y su regente es %s; por eso conviene mirar con "
+                  "especial atención el signo y la casa donde quedó ubicado, porque allí "
+                  "se juega buena parte de tu camino." % (asc_es, ruler_name)]
+        rparas += _P(src.get('planet_in_sign', {}).get(rp['key'], {}).get(rp.get('sign')))
+        rparas += _P(src.get('planet_in_house', {}).get(rp['key'], {}).get(str(rp.get('house', 1))))
+        rtitle = "%s, regente de tu carta, en %s · Casa %s" % (
+            ruler_name, rp.get('sign_es', rp.get('sign', '')), ROMAN[rp.get('house', 1) - 1])
+        sections.append(("El regente de tu carta", [(rtitle, rparas)]))
+
     cusp_items = []
     for h in chart['houses']:
         t = src.get('cusp_in_sign', {}).get(str(h['num']), {}).get(h['sign'])
@@ -498,6 +602,11 @@ def build_sections(chart, chart_type='natal', house_key='house', aspects=None):
     dec_items = build_decanates(chart)
     if dec_items:
         sections.append(("Los decanatos de tus casas y sus regentes", dec_items))
+
+    # Significado general de las doce casas (educativo, en todos los reportes)
+    casa_items = [("Casa %s · %s" % (ROMAN[i], _CASA_NOMBRE[i]), [_CASAS_12[i]])
+                  for i in range(12)]
+    sections.append(("Las doce casas astrológicas", casa_items))
 
     asp = nat.get('aspects', {})
     name_es = {p['key']: p['name'] for p in chart['planets']}
@@ -2155,6 +2264,31 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
                            ('clock', b_in.get('time', '')), ('pin', (pb.get('city') or '').strip())])
             meta['boxes'] = [{'title': nA, 'rows': box1}, {'title': nB, 'rows': box2}]
             meta['lamina_name'] = nA + '  +  ' + nB
+
+    # ── Tránsitos: bi-rueda (natal adentro, tránsitos afuera) ─────────────
+    if ct == 'transit' and data.get('natal') and data.get('transit'):
+        meta['lamina_chart'] = data['natal']
+        meta['lamina_transit'] = data['transit']
+        meta['lamina_toc'] = 'Tránsitos'
+        n_in = data['natal'].get('input', {})
+        t_in = data['transit'].get('input', {})
+
+        def _cl(rows):
+            return [(ic, t) for ic, t in rows if t]
+        try:
+            same = (abs(float(t_in.get('lat', 0)) - float(n_in.get('lat', 0))) < 0.01 and
+                    abs(float(t_in.get('lon', 0)) - float(n_in.get('lon', 0))) < 0.01)
+        except Exception:
+            same = True
+        tplace = (city or '').strip() if same else (
+            "%.2f°, %.2f°" % (float(t_in.get('lat', 0)), float(t_in.get('lon', 0))))
+        meta['boxes'] = [
+            {'title': 'Nacimiento', 'rows': _cl([('cal', fecha_es(n_in.get('date', ''))),
+                                                 ('clock', n_in.get('time', '')),
+                                                 ('pin', (city or '').strip())])},
+            {'title': 'Tránsitos', 'rows': _cl([('cal', fecha_es(t_in.get('date', ''))),
+                                                ('clock', t_in.get('time', '')),
+                                                ('pin', tplace)])}]
 
     png = _png_from_dataurl(chart_png)
     png2 = _png_from_dataurl(chart_png2)

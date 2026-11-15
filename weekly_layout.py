@@ -441,31 +441,51 @@ def build_layout(data, interp, name='', city=''):
                       'paras': [p1, p2] if p2 else [p1]})
     L['clima'] = clima
 
-    # ── Planetas que transitan su Casa I (la de la personalidad) ─────────
-    c1 = []
-    for k in ('aPluton', 'aNeptuno', 'aUrano', 'aSaturno', 'aJupiter', 'aChiron',
-              'aMarte', 'aVenus', 'aMercurio'):
-        p = snap.get(k)
-        e = fin.get(k, {})
-        if not p:
+    # ── Los tránsitos más importantes de la semana ──────────────────────
+    # Peso = planeta en tránsito × punto natal × aspecto × cercanía.
+    PESO_T = {'aPluton': 10, 'aNeptuno': 9, 'aUrano': 9, 'aSaturno': 8,
+              'aJupiter': 7, 'aChiron': 6, 'aNoduloNorte': 5, 'aMarte': 5,
+              'aSol': 4, 'aVenus': 3, 'aMercurio': 3}
+    rk_ = (data.get('ruler') or {}).get('key')
+    PESO_N = {'aSol': 3, 'aLuna': 3, 'aAsc': 3, 'aMc': 2.5}
+    PESO_A = {'Conjunction': 1.0, 'Opposition': 0.9, 'Square': 0.9,
+              'Trine': 0.7, 'Sextile': 0.55}
+    NOMBRE_N = dict(NOMBRE, aMc='Medio Cielo')
+
+    def peso(a):
+        pn = PESO_N.get(a['natal'], 2.5 if a['natal'] == rk_ else
+                        (2.0 if a['natal'] in ('aMercurio', 'aVenus', 'aMarte') else 1.5))
+        cerca = 1.0 if a.get('exact') else max(0.25, 0.75 - a.get('orb', 0) / 3.0)
+        return PESO_T.get(a['transit'], 1) * pn * PESO_A.get(a['type'], 0.5) * cerca
+
+    cands = [a for a in data.get('all_aspects', []) if a['transit'] != 'aLuna']
+    cands.sort(key=peso, reverse=True)
+    top = []
+    for a in cands:
+        db = asp_db.get(a['transit'], {}).get(a['type'], {}).get(a['natal'], '')
+        if not db and a['natal'] == 'aMc':
+            db = asp_db.get(a['transit'], {}).get(a['type'], {}).get('aMc', '')
+        if not db:
             continue
-        en1 = p['natal_house'] == 1
-        llega = e.get('natal_house') == 1 and not en1
-        if not (en1 or llega):
-            continue
-        bits = ["%s en %s" % (NOMBRE[k], p['sign_es'])]
-        if p.get('retrograde'):
-            bits.append("retrógrado")
-        if llega:
-            bits.append("entra a su Casa I esta semana")
-        elif e.get('natal_house') and e['natal_house'] != 1:
-            bits.append("sale de su Casa I esta semana")
-        else:
-            bits.append("toda la semana en su Casa I")
-        db = pih.get(k, {}).get('1', '')
-        c1.append({'key': k, 'linea': "Tránsito: " + " · ".join(bits),
-                   'texto': corta(db, 50, 170) or resumen(db, 80, 170)})
-    L['casa1'] = c1[:4]
+        cuando = ("exacto el " + _cuando_corto(a)) if a.get('exact') else \
+            ("toda la semana, %s" % ("acercándose" if a.get('applying') else "separándose"))
+        top.append({'key': a['transit'], 'typ': a['type'],
+                    'linea': "Tránsito: %s en %s a su %s natal · %s" % (
+                        NOMBRE[a['transit']], ASP_ES[a['type']], NOMBRE_N[a['natal']], cuando),
+                    'texto': corta(db, 50, 170) or resumen(db, 80, 170)})
+        if len(top) == 3:
+            break
+    # Planetas lentos (y Marte) que transitan su Casa I: se agregan al final
+    # si queda espacio en la página.
+    for k in ('aPluton', 'aNeptuno', 'aUrano', 'aSaturno', 'aJupiter', 'aChiron', 'aMarte'):
+        p_ = snap.get(k)
+        if p_ and p_['natal_house'] == 1:
+            db = pih.get(k, {}).get('1', '')
+            top.append({'key': k, 'typ': None,
+                        'linea': "Tránsito: %s en %s por su Casa I, la de la personalidad" % (
+                            NOMBRE[k], p_['sign_es']),
+                        'texto': corta(db, 50, 170) or resumen(db, 80, 170)})
+    L['casa1'] = top[:5]
 
     # ── Página 3: Sol / Luna / Ascendente ────────────────────────────────
     puntos = []

@@ -672,12 +672,8 @@ def _page2(d, L, data, web):
     total = intro_h + (24 + 170 + 10 + bt_h) + (18 + f_h) + (18 + c_h)
     disp2 = (1079 - 16) - (y + 4)
     # si no cabe, primero se acortan los textos de Casa I y luego del clima
-    for lim in (170, 130, 95):
-        for it in C1:
-            it['texto'] = wl.recorta(it['texto'], lim)
-        if total + c1_h(C1) + 4 * 12 <= disp2:
-            break
-    while C1 and total + c1_h(C1) + 4 * 12 > disp2:
+    # si no cabe todo, se quitan los últimos (el más importante siempre queda)
+    while len(C1) > 1 and total + c1_h(C1) + 4 * 12 > disp2:
         C1 = C1[:-1]
     total += c1_h(C1)
     libre = disp2 - total
@@ -729,13 +725,14 @@ def _page2(d, L, data, web):
             py += d.para(cx + 18, py, ctw, esc(p), 'r', 11.5, INK, 1.6) + 7
     if C1:
         y += c_h + gap
-        _kicker(d, ML, y + 9, "QUIÉN TRANSITA POR SU CASA I · LA DE LA PERSONALIDAD")
+        _kicker(d, ML, y + 9, "LOS TRÁNSITOS MÁS IMPORTANTES DE LA SEMANA")
         y += 18
         for it in C1:
             d.ln(ML, y, PW - ML, y, HAIR, 1)
             d.circ(ML + 14, y + 8 + 13, 13, fill=TINT)
             d.planet(it['key'], ML + 14, y + 8 + 13, 15)
-            d.tx(ML + 34 + 12, y + 8 + 11, it['linea'], 'sb', 11, GOLD_D)
+            s_, z_ = d.fit(it['linea'], 'sb', 11, c1w, 0, 8.5)
+            d.tx(ML + 34 + 12, y + 8 + 11, s_, 'sb', z_, GOLD_D)
             th = d.para(ML + 34 + 12, y + 8 + 15, c1w, esc(it['texto']), 'r', 10.5, INK, 1.45)
             y += 8 + 15 + th + 6
     _footer(d, 2, web)

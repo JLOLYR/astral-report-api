@@ -319,10 +319,9 @@ def _runhead(d, L):
 
 
 def _titulo(d, kicker, h2, sub):
-    d.tx(ML, 78, kicker, 'sb', 9, GOLD_D, track=3)
-    d.tx(ML, 103, h2, 'sb', 22, NAVY, track=-0.2)
-    d.tx(ML, 122, sub, 'mi', 12, GOLD_D)
-    return 134
+    d.tx(ML, 90, h2, 'sb', 22, NAVY, track=-0.2)
+    d.tx(ML, 109, sub, 'mi', 12, GOLD_D)
+    return 121
 
 
 def _kicker(d, x, y, s, col=GOLD_D, size=9, align='l'):
@@ -662,9 +661,27 @@ def _page2(d, L, data, web):
     def clima_h(cl):
         return 32 + 44 + sum(d.ph(esc(p), ctw, 'r', 11.5, INK, 1.6) + 7 for p in cl['paras'])
     c_h = max([clima_h(cl) for cl in L['clima']] or [0])
+    C1 = L.get('casa1') or []
+    c1w = CW - 34 - 12
+
+    def c1_h(items):
+        if not items:
+            return 0
+        return 18 + sum(8 + 15 + d.ph(esc(it['texto']), c1w, 'r', 10.5, INK, 1.45) + 6
+                        for it in items)
     total = intro_h + (24 + 170 + 10 + bt_h) + (18 + f_h) + (18 + c_h)
-    libre = (1079 - 16) - (y + 4) - total
-    gap = max(12.0, min(46.0, libre / 3.0))
+    disp2 = (1079 - 16) - (y + 4)
+    # si no cabe, primero se acortan los textos de Casa I y luego del clima
+    for lim in (170, 130, 95):
+        for it in C1:
+            it['texto'] = wl.recorta(it['texto'], lim)
+        if total + c1_h(C1) + 4 * 12 <= disp2:
+            break
+    while C1 and total + c1_h(C1) + 4 * 12 > disp2:
+        C1 = C1[:-1]
+    total += c1_h(C1)
+    libre = disp2 - total
+    gap = max(12.0, min(46.0, libre / (4.0 if C1 else 3.0)))
 
     # 4.2 introducción
     y += 4
@@ -710,6 +727,17 @@ def _page2(d, L, data, web):
         py = y + 16 + 44
         for p in cl['paras']:
             py += d.para(cx + 18, py, ctw, esc(p), 'r', 11.5, INK, 1.6) + 7
+    if C1:
+        y += c_h + gap
+        _kicker(d, ML, y + 9, "QUIÉN TRANSITA POR SU CASA I · LA DE LA PERSONALIDAD")
+        y += 18
+        for it in C1:
+            d.ln(ML, y, PW - ML, y, HAIR, 1)
+            d.circ(ML + 14, y + 8 + 13, 13, fill=TINT)
+            d.planet(it['key'], ML + 14, y + 8 + 13, 15)
+            d.tx(ML + 34 + 12, y + 8 + 11, it['linea'], 'sb', 11, GOLD_D)
+            th = d.para(ML + 34 + 12, y + 8 + 15, c1w, esc(it['texto']), 'r', 10.5, INK, 1.45)
+            y += 8 + 15 + th + 6
     _footer(d, 2, web)
 
 

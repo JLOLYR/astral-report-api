@@ -529,15 +529,16 @@ def compute_weekly(natal, week_date, reloc=None):
     n = int(round((jd1 - jd0) / step))
     grid = [jd0 + i * step for i in range(n)] + [jd1]
 
-    def scan(key, pid, flag, only=None):
+    def scan(key, pid, flag, only=None, tgts=None):
         """Aspectos exactos (o en orbe estrecho) de un cuerpo durante la semana."""
         out = []
+        tgts = targets if tgts is None else tgts
         try:
             lons = [_wk_pos(t, pid, flag)[0] for t in grid]
         except Exception:
             return out
         max_orb = 1.5 if key in _WK_SLOW else 1.0
-        for tk, tl in targets.items():
+        for tk, tl in tgts.items():
             for ang, typ, typ_es in _WK_ANGLES:
                 if only and typ not in only:
                     continue
@@ -649,8 +650,41 @@ def compute_weekly(natal, week_date, reloc=None):
             t = _bisect(lambda x: _wdiff(elong(x), goal), grid[i], grid[i + 1])
             phases.append(phase_info(t, ib))
 
+    # ── Regente de la carta (planeta que rige el Ascendente natal) ───────
+    _REG = {'Aries': 'aMarte', 'Taurus': 'aVenus', 'Gemini': 'aMercurio',
+            'Cancer': 'aLuna', 'Leo': 'aSol', 'Virgo': 'aChiron', 'Libra': 'aVenus',
+            'Scorpio': 'aPluton', 'Sagittarius': 'aJupiter', 'Capricorn': 'aSaturno',
+            'Aquarius': 'aUrano', 'Pisces': 'aNeptuno'}
+    ruler = None
+    rk = _REG.get(base['angles']['asc']['sign'])
+    rdef = next((x for x in PLANETS if x[0] == rk), None)
+    if rdef and rk in snap_pos:
+        _, rname, rpid, rflag = rdef
+        tg_all = {k: v for k, v in natal_pos.items()
+                  if k in ('aSol', 'aLuna', 'aMercurio', 'aVenus', 'aMarte', 'aJupiter',
+                           'aSaturno', 'aUrano', 'aNeptuno', 'aPluton', 'aChiron',
+                           'aNoduloNorte')}
+        tg_all['aAsc'] = base['angles']['asc']['lon']
+        tg_all['aMc'] = base['angles']['mc']['lon']
+        r_asp = scan(rk, rpid, rflag, tgts=tg_all)
+        seen, ra = set(), []
+        for a in sorted(r_asp, key=lambda a: (0 if a['exact'] else 1, a.get('jd', 0), a['orb'])):
+            kk = (a['natal'], a['type'])
+            if kk not in seen:
+                seen.add(kk); ra.append(a)
+        sp = next(p for p in snap['planets'] if p['key'] == rk)
+        ruler = {'key': rk, 'name': rname, 'asc_sign_es': base['angles']['asc']['sign_es'],
+                 'sign': sp['sign'], 'sign_es': sp['sign_es'], 'deg': sp['deg'],
+                 'min': sp['min'], 'lon': sp['lon'], 'natal_house': sp['natal_house'],
+                 'retrograde': sp['retrograde'],
+                 'end_house': end_pos.get(rk, {}).get('natal_house'),
+                 'stations': [x for x in stations if x['key'] == rk],
+                 'ingresses': [x for x in ingresses if x['key'] == rk],
+                 'aspects': ra}
+
     sunday = monday + timedelta(days=6)
     return {
+        'ruler': ruler,
         'natal': base, 'transit': snap, 'transit_end': end_pos,
         'ingresses': ingresses, 'moon_all': moon_all,
         'cross_aspects': _cross_aspects(snap_pos, natal_pos, 'transit', 'natal'),

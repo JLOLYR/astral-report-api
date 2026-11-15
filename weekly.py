@@ -75,20 +75,23 @@ CALMA = {
             "cuidarse sin andar a las carreras.",
 }
 
-# De qué se ocupa cada casa (dicho de usted)
+# De qué se ocupa cada casa, con los nombres que usa Mauricio Puerta
+# (rueda «Carta_info»: I Personalidad, II Dinero, III Mente inferior, IV Hogar,
+#  V Hijos, VI Salud y trabajo, VII Matrimonio, VIII Transformación,
+#  IX Mente superior, X Misión, XI Amigos, XII Karmas).
 CASA_TEMA = [
-    "su persona, su cuerpo y la manera como se presenta ante el mundo",
-    "su dinero, sus recursos y aquello que usted valora",
-    "su mente, sus palabras, los hermanos, los vecinos y los trayectos cortos",
-    "su hogar, su familia y sus raíces",
-    "sus amores, los hijos, su creatividad y todo lo que lo divierte",
-    "su trabajo diario, sus rutinas y el cuidado de la salud",
-    "su pareja, sus socios y la relación con los demás",
-    "las crisis que transforman, la intimidad y los recursos compartidos",
-    "sus creencias, los estudios superiores, los viajes largos y el extranjero",
-    "su profesión, su imagen pública y sus metas",
-    "sus amistades, los grupos y los proyectos a futuro",
-    "su mundo interior, sus retiros y aquello que guarda en silencio",
+    "su personalidad, su carácter y la forma de su cuerpo",
+    "el dinero, la libertad que da el dinero y la seguridad material",
+    "la mente inferior: la enseñanza, la literatura, los hermanos y los viajes cortos",
+    "los padres, la intimidad, el hogar, la casa, las tierras y el país natal",
+    "los hijos, todo lo creado por usted mismo, la diversión y el amor",
+    "la salud, el trabajo y los servidores",
+    "el matrimonio, la compañía, los socios y la armonía",
+    "la transformación, las herencias, el sexo, los poderes ocultos latentes y las ganancias y pérdidas",
+    "la mente superior: la religión, la filosofía y los viajes largos",
+    "la misión, su lugar en la sociedad, la profesión y la ambición",
+    "los amigos, las esperanzas, los deseos y la fraternidad",
+    "los karmas, las deudas del destino, las limitaciones y lo inevitable",
 ]
 
 # El tono que le pone cada signo a la Luna

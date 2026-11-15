@@ -26,40 +26,29 @@ RAPIDOS = ['aSol', 'aMercurio', 'aVenus', 'aMarte']
 ORDEN_RETRO = ['aMercurio', 'aVenus', 'aMarte', 'aJupiter', 'aSaturno', 'aUrano',
                'aNeptuno', 'aPluton', 'aChiron']
 
-# §6.5 Temas de las casas
-CASA_CORTO = ["persona e imagen", "dinero propio", "entorno y palabras",
-              "hogar y familia", "placer e hijos", "trabajo y salud",
-              "pareja y socios", "dinero compartido", "viajes y estudios",
-              "carrera", "amigos y proyectos", "retiro"]
-CASA_DE = ["la de su persona y su imagen", "la del dinero propio y sus valores",
-           "la del entorno y la comunicación", "la del hogar y la familia",
-           "la del placer, los hijos y la creatividad",
-           "la del trabajo diario y la salud", "la de la pareja y los socios",
-           "la del dinero compartido y la intimidad",
-           "la de los viajes, los estudios y las creencias",
-           "la de la carrera y la imagen pública",
-           "la de los amigos y los proyectos", "la del retiro y lo oculto"]
-CASA_HABLA = ["su persona", "su dinero", "su entorno", "su hogar",
-              "sus gustos y sus hijos", "su trabajo y su salud",
-              "su pareja y sus socios", "el dinero compartido y la intimidad",
-              "sus viajes y creencias", "su carrera", "sus amigos y proyectos",
-              "su mundo interior"]
-# «Su semana en una frase»: foco según la casa que ilumina el Sol
-FOCO = ["ocuparse de usted y de su imagen", "ordenar su dinero y lo que valora",
-        "conversar, aprender y moverse por su entorno",
-        "ordenar la casa —la de adentro y la de afuera—",
-        "disfrutar, crear y dedicarse a lo que ama",
-        "poner en orden el trabajo, las rutinas y la salud",
-        "atender a su pareja, a sus socios y a los demás",
-        "sanear las cuentas compartidas y soltar lo que ya murió",
-        "ampliar horizontes: estudiar, viajar y creer",
-        "ocuparse de su carrera y de sus metas",
-        "juntarse con los amigos y empujar proyectos",
-        "bajar el ritmo y escucharse por dentro"]
-CASA_EN = ["en su persona", "en el dinero propio", "en su entorno", "en el hogar",
-           "en sus gustos y afectos", "en el trabajo y la salud", "en la pareja",
-           "en el dinero compartido", "en sus viajes y estudios", "en la carrera",
-           "en sus proyectos", "en su mundo interior"]
+# Temas de las casas según Mauricio Puerta (rueda «Carta_info»)
+CASA_CORTO = ["personalidad", "dinero", "mente inferior", "hogar y padres",
+              "hijos y amor", "salud y trabajo", "matrimonio y socios",
+              "transformación", "mente superior", "misión y profesión",
+              "amigos y esperanzas", "karmas"]
+CASA_DE = ["la de la personalidad y el carácter",
+           "la del dinero y la seguridad material",
+           "la de la mente inferior, los hermanos y los viajes cortos",
+           "la del hogar, los padres y la intimidad",
+           "la de los hijos, la diversión y el amor",
+           "la de la salud y el trabajo",
+           "la del matrimonio y los socios",
+           "la de la transformación, las herencias y el sexo",
+           "la de la mente superior, la filosofía y los viajes largos",
+           "la de la misión y la profesión",
+           "la de los amigos y las esperanzas",
+           "la de los karmas y las deudas del destino"]
+CASA_HABLA = ["su personalidad", "su dinero", "su mente y sus hermanos",
+              "su hogar y sus padres", "sus hijos y sus amores",
+              "su salud y su trabajo", "su matrimonio y sus socios",
+              "sus transformaciones", "su mente superior y sus viajes largos",
+              "su misión y su profesión", "sus amigos y sus esperanzas",
+              "sus karmas"]
 
 ASP_CORTA = {
     'Conjunction': "El planeta se le monta encima y su tema se vuelve el de la semana.",
@@ -152,58 +141,67 @@ def recorta(texto, maximo):
     return resumen(t, min(120, maximo // 2), maximo)
 
 
-_STOP = set("esta este toda todas como casa gente para una la se que ahora hasta "
-            "cada alguna mucha tanta ella de entre sobre desde durante mientras "
-            "aunque porque contra bajo ante tras nada poca otra cierta dicha "
-            "misma aquella".split())
-_START = re.compile(r'^(no |buen[ao]? |es (época|el momento|tiempo|una? (buen|muy|'
-                    r'excelente|magn))|época |tiempo de |momento )', re.I)
-_COLA = (' y', ' o', ' es decir', ' si necesita', ' pero', ' para ello', ' que',
-         ' de', ' a', ' en', ' con', ' sin', ' por', ' para', ' ni', ' e', ' u')
+# Verbos en imperativo (de usted) que usa Mauricio Puerta al aconsejar.
+_IMPER = set("""sea busque sepa trate desarrolle controle cuídese observe deje salga vigile
+procure revise interésese aprenda haga cuide piense mire mejore tenga aumente estudie
+recuerde esté canalice saque conozca calme siéntase dedíquese vea sienta ponga aproveche
+refuerce cambie abra comparta póngale acérquese viaje libérese prepárese espere acepte
+conózcase tome evite expanda analice dé realice goce estimule trabaje comprenda déle
+invierta hágase renueve asesórese diviértase mírese aclare comience ensaye transforme
+armonice confíe descargue dése medite eleve fortalezca arregle ayúdese reflexione reúnase
+bucee asegúrese esfuércese termine atrévase adquiera use relájese organice incremente lleve
+ayude viva utilice conéctese ordene despierte fíjese escuche invite resuelva elimine encare
+modernice cultive escriba compréndase préstele maneje construya intente crea muéstrese venza
+colabore compre planifique déjese exprese refresque vaya obsérvese continúe actúe encuentre
+respete establezca active asegure eche comprométase ábrale visualícese relaciónese coopere
+hable concrete decida concéntrese converse visualice cumpla atienda recapacite posponga
+agilice dirija muévase enfrente promueva tómese defina acéptese amplíe pida regenere
+aprovéchelo baje profundice comuníquele acentúe embellezca obre infórmese demuestre
+enriquezca respire ábrase entienda mantenga hágalo estabilice oiga descubra planee
+solucione pruebe descarte dialogue equilibre suelte evalúe contémplese sépase domínese
+brille enfóquese evalúese ocúpese aléjese olvídese apóyese apóyele dele empiece
+inviértale ahorre gaste cuente exija perdone prevéngase protéjase sincérese ubíquese""".split())
+_PRONOM = re.compile(r'^(no (se |le |lo |la |les |los |me )?[a-záéíóúñ]+|'
+                     r'(buen|excelente|magnífico) momento para|es (el )?momento (de|para)|'
+                     r'es (buena )?época (de|para))\b', re.I)
+_ENCL = re.compile(r'^[a-záéíóúñ]*[áéíó][a-zñ]*(se|le|lo|la|les|los|me|selo|sela)$')
 
 
 def _imper(f):
+    """¿La oración es un consejo (imperativo de usted)?"""
     g = f.lstrip('¿¡"«(').strip()
-    if _START.match(g):
+    if _PRONOM.match(g):
         return True
     w = re.split(r'[\s,;:]', g, 1)[0].lower()
-    if len(w) < 3 or w in _STOP or not w.isalpha():
-        return False
-    return w.endswith(('e', 'a'))
+    return w in _IMPER or bool(_ENCL.match(w))
 
 
-def _clausula(f, lo, hi):
-    """Corta una oración en una pausa (, ; :) dejando una idea completa."""
-    if len(f) <= hi:
-        return f
-    cortes = [m.start() for m in re.finditer(r'[;:,]', f[:hi + 1]) if m.start() >= lo]
-    for cut in reversed(cortes):
-        c = f[:cut].rstrip(' ,;:')
-        if not c.lower().endswith(_COLA):
-            return c + '.'
-    return None
+def _ok(f):
+    """Descarta oraciones con restos de OCR o referencias técnicas."""
+    return not re.search(r'[|()\[\]]|\.\.\.|Nodo|Nódulo|Más o menos cada', f)
 
 
-def corta(texto, lo=30, hi=90, skip=0, n=10):
-    """Frase breve y accionable tomada TAL CUAL de la base de Mauricio Puerta:
-    la primera oración en imperativo (consejo) que quepa entre lo y hi
-    caracteres; si es larga, se corta en una pausa. Nunca inventa texto."""
+def corta(texto, lo=30, hi=90, skip=0, n=12):
+    """Consejo breve tomado TAL CUAL de la base de Mauricio Puerta: la primera
+    oración en imperativo que quepa entre lo y hi caracteres (o su primera
+    cláusula, cortada en punto y coma). Nunca inventa texto: si no encuentra
+    un consejo claro, devuelve ''."""
     t = ' '.join((texto or '').split())
     if not t:
         return ''
     fr = [f.strip() for f in re.split(r'(?<=[.!?])\s+', t) if len(f.strip()) > 12]
-    if not fr:
-        return ''
-    cand = fr[skip:skip + n] or fr[:n]
-    for solo_imp in (True, False):
-        for f in cand:
-            if solo_imp and not _imper(f):
-                continue
-            c = _clausula(f, lo, hi)
-            if c and len(c) >= lo:
-                return c[0].upper() + c[1:]
-    f = cand[0]
-    return f[:f.rfind(' ', 0, hi)].rstrip(' ,;:') + '…'
+    cand = [f for f in (fr[skip:skip + n] or fr[:n]) if _ok(f) and _imper(f)]
+    for f in cand:                                   # oración completa
+        if lo <= len(f) <= hi:
+            return f[0].upper() + f[1:]
+    for f in cand:                                   # primera cláusula (;)
+        parts = [p.strip() for p in f.split(';')]
+        if len(parts) > 1 and lo <= len(parts[0]) <= hi:
+            return parts[0][0].upper() + parts[0][1:] + '.'
+    for f in cand:                                   # algo más largo
+        if lo <= len(f) <= int(hi * 1.35):
+            return f[0].upper() + f[1:]
+    return ''
 
 
 def _lista(nombres):
@@ -350,7 +348,9 @@ def build_layout(data, interp, name='', city=''):
     # ── Su semana en una frase (≤ 130) ───────────────────────────────────
     pih = tr.get('planet_in_house', {})
     sol_db = pih.get('aSol', {}).get(str(hs), '')
-    frase = corta(sol_db, 45, 125) or ("El Sol ilumina esta semana su %s." % _casa(hs))
+    frase = corta(sol_db, 45, 125) or corta(sol_db, 30, 125, skip=0, n=40) \
+        or ("El Sol ilumina esta semana su %s." % _casa(hs))
+    L['frase_fuente'] = "Según el tránsito del Sol por su %s" % _casa(hs)
     L['frase'] = frase
 
     L['elementos'] = _elementos(data)
@@ -441,6 +441,32 @@ def build_layout(data, interp, name='', city=''):
                       'paras': [p1, p2] if p2 else [p1]})
     L['clima'] = clima
 
+    # ── Planetas que transitan su Casa I (la de la personalidad) ─────────
+    c1 = []
+    for k in ('aPluton', 'aNeptuno', 'aUrano', 'aSaturno', 'aJupiter', 'aChiron',
+              'aMarte', 'aVenus', 'aMercurio'):
+        p = snap.get(k)
+        e = fin.get(k, {})
+        if not p:
+            continue
+        en1 = p['natal_house'] == 1
+        llega = e.get('natal_house') == 1 and not en1
+        if not (en1 or llega):
+            continue
+        bits = ["%s en %s" % (NOMBRE[k], p['sign_es'])]
+        if p.get('retrograde'):
+            bits.append("retrógrado")
+        if llega:
+            bits.append("entra a su Casa I esta semana")
+        elif e.get('natal_house') and e['natal_house'] != 1:
+            bits.append("sale de su Casa I esta semana")
+        else:
+            bits.append("toda la semana en su Casa I")
+        db = pih.get(k, {}).get('1', '')
+        c1.append({'key': k, 'linea': "Tránsito: " + " · ".join(bits),
+                   'texto': corta(db, 50, 170) or resumen(db, 80, 170)})
+    L['casa1'] = c1[:4]
+
     # ── Página 3: Sol / Luna / Ascendente ────────────────────────────────
     puntos = []
     rank = {k: i for i, k in enumerate(['aPluton', 'aNeptuno', 'aUrano', 'aSaturno',
@@ -461,8 +487,8 @@ def build_layout(data, interp, name='', city=''):
             a = cands[0]
             cuando = _cuando_corto(a) if a['exact'] else "toda la semana"
             item['evento'] = {'tk': a['transit'], 'typ': a['type'],
-                              'texto': "%s en %s · %s" % (NOMBRE[a['transit']],
-                                                          ASP_ES[a['type']], cuando)}
+                              'texto': "Tránsito: %s en %s · %s" % (
+                                  NOMBRE[a['transit']], ASP_ES[a['type']], cuando)}
             item['clave'] = ''
             item['db'] = (asp_db.get(a['transit'], {}).get(a['type'], {}).get(nk)
                           or fb.get(a['type'], ''))
@@ -474,6 +500,57 @@ def build_layout(data, interp, name='', city=''):
                           "esta semana." % NOMBRE[nk])
         puntos.append(item)
     L['puntos'] = puntos
+
+    # ── Regente de la carta ──────────────────────────────────────────────
+    r = data.get('ruler')
+    if not r:
+        # respaldo (si astro.py no entregó el bloque 'ruler')
+        _REG = {'Aries': 'aMarte', 'Taurus': 'aVenus', 'Gemini': 'aMercurio',
+                'Cancer': 'aLuna', 'Leo': 'aSol', 'Virgo': 'aChiron', 'Libra': 'aVenus',
+                'Scorpio': 'aPluton', 'Sagittarius': 'aJupiter', 'Capricorn': 'aSaturno',
+                'Aquarius': 'aUrano', 'Pisces': 'aNeptuno'}
+        asc = data['natal']['angles']['asc']
+        rk = _REG.get(asc['sign'])
+        sp = snap.get(rk)
+        if sp:
+            r = {'key': rk, 'name': NOMBRE[rk], 'asc_sign_es': asc['sign_es'],
+                 'sign': sp['sign'], 'sign_es': sp['sign_es'], 'deg': sp['deg'],
+                 'natal_house': sp['natal_house'], 'retrograde': sp['retrograde'],
+                 'end_house': fin.get(rk, {}).get('natal_house'),
+                 'stations': [x for x in data['stations'] if x['key'] == rk],
+                 'ingresses': [x for x in data.get('ingresses', []) if x['key'] == rk],
+                 'aspects': [a for a in data['aspects'] if a['transit'] == rk]}
+    L['regente'] = None
+    if r:
+        k = r['key']
+        h = r['natal_house']
+        estado = 'retrógrado' if r['retrograde'] else 'directo'
+        movs = []
+        for s_ in r['stations']:
+            movs.append("%s %s" % ('se vuelve retrógrado' if s_['kind'] == 'retrograde'
+                                   else 'queda directo', _cuando_corto(s_)))
+            estado = 'retrógrado' if s_['kind'] == 'retrograde' else 'directo'
+            if not r['retrograde'] and s_['kind'] == 'retrograde':
+                estado = 'directo'
+        for g in r['ingresses']:
+            movs.append("entra a %s el %s" % (g['sign_es'], _cuando_corto(g)))
+        if r.get('end_house') and r['end_house'] != h:
+            movs.append("pasa a su %s" % _casa(r['end_house']))
+        asps = []
+        for a in r['aspects'][:3]:
+            asps.append({'typ': a['type'],
+                         'txt': "%s a su %s natal%s" % (
+                             ASP_ES[a['type']], NOMBRE.get(a['natal'], 'Medio Cielo')
+                             if a['natal'] != 'aMc' else 'Medio Cielo',
+                             (" · " + _cuando_corto(a)) if a.get('exact') else "")})
+        txt = resumen(pih.get(k, {}).get(str(h), ''), 80, 230)
+        L['regente'] = {
+            'key': k, 'name': r['name'],
+            'pos': "Rige su Ascendente en %s" % r['asc_sign_es'],
+            'linea': "Tránsito: %s en %d° de %s · %s · %s" % (
+                r['name'], r['deg'], r['sign_es'], _casa(h), estado),
+            'sign': SIGNOS_EN.index(r['sign']),
+            'movs': movs, 'aspectos': asps, 'texto': txt}
 
     # ── Tablero de retrógrados (hasta 7 filas) ───────────────────────────
     filas = []
@@ -498,7 +575,7 @@ def build_layout(data, interp, name='', city=''):
                                      'retro': 'retrógrado'}[estado],
                       'hours': hrs, 'label': lab,
                       'casa': _casa(h), 'casa_corto': CASA_CORTO[h - 1],
-                      'hacer': corta(pih.get(k, {}).get(str(h), ''), 24, 66)
+                      'hacer': corta(pih.get(k, {}).get(str(h), ''), 20, 70)
                       or HACER[k][estado]})
     directos = [NOMBRE[k] for k in ORDEN_RETRO if k not in orden]
     if not filas:
@@ -522,9 +599,11 @@ def build_layout(data, interp, name='', city=''):
             if ok:
                 tit = "%s %d" % (DIAS[a['weekday']].capitalize(), _fecha(a['date'])[2])
                 db = asp_db.get(a['transit'], {}).get(a['type'], {}).get(a['natal'], '')
-                tx = "%s en %s a su %s. %s" % (_pl(a['transit'], True), ASP_ES[a['type']],
-                                               NOMBRE[a['natal']], corta(db, 30, 95))
-                return tit, tx.strip()
+                tx = ("Tránsito de %s en %s a su %s natal." % (
+                    _pl(a['transit']), ASP_ES[a['type']], NOMBRE[a['natal']])
+                      ).replace(" de el ", " del ")
+                c_ = corta(db, 25, 95)
+                return tit, (tx + (" " + c_ if c_ else "")).strip()
         return vacio_t, vacio_x
     fav = clave(('Trine', 'Sextile'), "Sin día señalado",
                 "Ningún trígono ni sextil es exacto con su Sol, su Luna o su "
@@ -532,10 +611,13 @@ def build_layout(data, interp, name='', city=''):
     cal = clave(('Square', 'Opposition'), "Sin día señalado",
                 "Ninguna cuadratura ni oposición es exacta con su Sol, su Luna o su "
                 "Ascendente esta semana.")
-    c2 = corta(sol_db, 35, 110, skip=2)
-    if c2 == frase:
-        c2 = corta(sol_db, 35, 110, skip=5)
-    cons = ("Sol en su %s" % _casa(hs), c2)
+    c2 = ''
+    for sk in (1, 2, 3, 5, 8):
+        c2 = corta(sol_db, 30, 110, skip=sk)
+        if c2 and c2 != frase:
+            break
+    cons = ("Tránsito del Sol por su %s" % _casa(hs),
+            c2 or "El foco de la semana está en %s." % CASA_TEMA[hs - 1])
     L['claves'] = [("DÍA A FAVOR", fav[0], fav[1], '#93B096'),
                    ("DÍA PARA IR CON CALMA", cal[0], cal[1], '#C08A7B'),
                    ("CONSEJO DE LA SEMANA", cons[0], cons[1], '#B8863B')]

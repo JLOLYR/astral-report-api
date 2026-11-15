@@ -1527,7 +1527,7 @@ def render_pdf(sections, chart_png_bytes, meta,
                 content.append(Paragraph(esc(blk[1]), st_close))
 
     # ── Antepenúltima: página de información (rueda educativa cuadrada) ───
-    info_img = _info_path()
+    info_img = None if meta.get('compact') else _info_path()
     if info_img:
         try:
             from PIL import Image as PILImage2
@@ -1647,6 +1647,10 @@ def render_pdf(sections, chart_png_bytes, meta,
         f.append(Paragraph(esc(lf), s4))
         if meta.get('city'):
             f.append(Paragraph(esc(meta['city']), s4))
+        if meta.get('extra_lines'):
+            f.append(Spacer(1, 16))
+            for _i, _ln in enumerate(meta['extra_lines']):
+                f.append(Paragraph(esc(_ln), s5 if _i == 0 else s6))
         if meta.get('chart_type') == 'solar_return' and meta.get('return_moment'):
             f.append(Spacer(1, 16))
             if meta.get('relocated') and meta.get('return_place'):
@@ -1806,6 +1810,8 @@ def render_docx(sections, chart_png_bytes, meta,
     cover_line(linea, 12, INK_RGB)
     if meta.get('city'):
         cover_line(meta['city'], 12, INK_RGB, space_after=8)
+    for _ln in (meta.get('extra_lines') or []):
+        cover_line(_ln, 11, BLUE_RGB, space_after=4)
 
     # Retorno solar: lugar y momento exacto del retorno
     if meta.get('chart_type') == 'solar_return' and meta.get('return_moment'):
@@ -1985,7 +1991,7 @@ def render_docx(sections, chart_png_bytes, meta,
                 cr.font.size = Pt(13); cr.font.color.rgb = NAVY_RGB
 
     # Antepenúltima: página de información (rueda educativa)
-    info_img = _info_path()
+    info_img = None if meta.get('compact') else _info_path()
     if info_img:
         doc.add_page_break()
         ip = doc.add_paragraph(); ip.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -2048,6 +2054,7 @@ _SUBTITLE = {
     'natal': 'de Carta Natal', 'transit': 'de Tránsitos',
     'solar_return': 'de Retorno Solar', 'progressed': 'de Carta Progresada',
     'combined': 'de Carta Combinada', 'akashic': 'de Registros Akáshicos',
+    'weekly': 'de Tránsitos Semanales',
 }
 _CHART_HEADING = {
     'natal': 'Carta natal: el libreto de tu vida',
@@ -2056,6 +2063,7 @@ _CHART_HEADING = {
     'progressed': 'Tus dos cartas: natal y progresada',
     'combined': 'La carta combinada del vínculo',
     'akashic': 'Tu carta natal y tu Casa XII',
+    'weekly': 'Bi-rueda: su carta natal (interior) y el cielo del lunes (exterior)',
 }
 _INTRO_TITLE = {
     'transit': 'Qué son los tránsitos',
@@ -2077,8 +2085,17 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
       combined     → {a, b, combined}
     """
     ct = chart_type or "natal"
+    _wk_closing = None
 
-    if ct == "transit":
+    if ct == "weekly":
+        # Tránsitos semanales (resumen): textos propios en weekly.py
+        import weekly as _wk
+        chart = data['transit']
+        base_meta = data.get('natal', chart)
+        _wk_pre, sections, _wk_closing = _wk.build_weekly(
+            data, _interp(), place=(data.get('reloc_city') or city or ''))
+        _intro = ""
+    elif ct == "transit":
         chart = data['transit']
         base_meta = data.get('natal', chart)
         xa = [{'a': x['transit'], 'b': x['natal'], 'type': x['type'], 'orb': x['orb']}
@@ -2111,6 +2128,8 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
 
     if ct == "akashic":
         pre_blocks = _ak_pre
+    elif ct == "weekly":
+        pre_blocks = _wk_pre
     elif ct in ("natal", "solar_return", "combined", "progressed"):
         # Progresada usa el mismo preámbulo que natal/retorno (Sol, Luna, Asc,
         # cruz y elemento), adaptado.
@@ -2136,6 +2155,9 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
     legend = build_legend()
     glossary = build_glossary()
     closing = build_closing(ct)
+    if ct == 'weekly':
+        glossary = None                 # reporte resumido: sin glosario
+        closing = _wk_closing
     person = (name or '').strip()
     meta = {
         'name': person,
@@ -2265,11 +2287,24 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
             meta['boxes'] = [{'title': nA, 'rows': box1}, {'title': nB, 'rows': box2}]
             meta['lamina_name'] = nA + '  +  ' + nB
 
+    # ── Semanal: datos de la semana para portada, pie y lámina ────────────
+    if ct == 'weekly':
+        import weekly as _wk
+        _w = data.get('week', {})
+        _rng = _wk.rango_semana(_w.get('start', ''), _w.get('end', ''))
+        _wplace = (data.get('reloc_city') or city or '').strip()
+        meta['compact'] = True          # sin página educativa (info.jpg)
+        meta['week_label'] = 'Semana del ' + _rng
+        meta['extra_lines'] = ['Semana del ' + _rng,
+                               'Calculado para el lunes a las 00:00' +
+                               ((' en ' + _wplace) if _wplace else '')]
+        meta['file_suffix'] = '_semana_' + _w.get('start', '')
+
     # ── Tránsitos: bi-rueda (natal adentro, tránsitos afuera) ─────────────
-    if ct == 'transit' and data.get('natal') and data.get('transit'):
+    if ct in ('transit', 'weekly') and data.get('natal') and data.get('transit'):
         meta['lamina_chart'] = data['natal']
         meta['lamina_transit'] = data['transit']
-        meta['lamina_toc'] = 'Tránsitos'
+        meta['lamina_toc'] = 'Tránsitos' if ct == 'transit' else 'El cielo del lunes sobre su carta'
         n_in = data['natal'].get('input', {})
         t_in = data['transit'].get('input', {})
 
@@ -2289,16 +2324,26 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
             {'title': 'Tránsitos', 'rows': _cl([('cal', fecha_es(t_in.get('date', ''))),
                                                 ('clock', t_in.get('time', '')),
                                                 ('pin', tplace)])}]
+        if ct == 'weekly':
+            meta['boxes'][1] = {'title': 'Semana', 'rows': _cl([
+                ('cal', _rng), ('clock', 'Lunes 00:00'),
+                ('pin', _wplace or tplace)])}
 
     png = _png_from_dataurl(chart_png)
     png2 = _png_from_dataurl(chart_png2)
-    tsuf = '' if ct == 'natal' else ('_' + ct)
+    tsuf = '' if ct == 'natal' else (meta.get('file_suffix') or ('_' + ct))
     safe = "Reporte_Astral" + (("_" + person.replace(' ', '_')) if person else "") + tsuf
     # El nombre del archivo va en una cabecera HTTP (solo ASCII): quita acentos
     # y cualquier carácter no seguro para no romper la respuesta.
     import unicodedata as _ud
     safe = ''.join(ch for ch in _ud.normalize('NFKD', safe) if ord(ch) < 128)
     safe = ''.join(ch if (ch.isalnum() or ch in ('_', '-')) else '_' for ch in safe) or 'Reporte_Astral'
+    if ct == 'weekly' and fmt != 'docx':
+        # Diseño v1: PDF de 3 páginas fijas (weekly_pdf.py)
+        import weekly_pdf as _wpdf
+        out = _wpdf.render(data, _interp(), name=person, city=_wplace,
+                           natal_city=meta.get('city', ''), brand=_brand())
+        return out, safe + '.pdf', 'application/pdf'
     if fmt == 'docx':
         out = render_docx(sections, png, meta,
                           pre_blocks=pre_blocks, legend=legend, glossary=glossary,

@@ -483,10 +483,14 @@ TEXTS = {
            "Cómo conversa el cielo actual con la carta con la que naciste.",
            ("El cielo nunca se detiene: cada día dialoga con tu mapa natal.",
             "Conocer tus tránsitos es aprender a moverte a su ritmo.")),
+ 'weekly': ("El cielo de su semana — Tránsitos semanales",
+           "El cielo del lunes a las 00:00, sobre la carta con la que usted nació.",
+           ("Los planetas inclinan, pero no obligan.",
+            "Conocer el clima de la semana es saber con qué viento cuenta.")),
 }
 ADORNO = {'natal':'sun-sq.png','solar_return':'sun-sq.png','progressed':'moon-sq.png',
           'combined':'hands-heart.png','akashic':'akashic-hands.png',
-          'transit':'moon-sq.png'}
+          'transit':'moon-sq.png','weekly':'moon-sq.png'}
 
 
 # ── Helpers de dibujo de la página ───────────────────────────────────────────

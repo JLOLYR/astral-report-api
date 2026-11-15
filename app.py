@@ -76,6 +76,13 @@ class ProgressedRequest(BaseModel):
     reloc: Optional[Reloc] = None
 
 
+class WeeklyRequest(BaseModel):
+    natal: BirthData
+    week_date: str = Field(..., examples=["2026-11-16"],
+                           description="Cualquier día de la semana deseada (AAAA-MM-DD)")
+    reloc: Optional[Reloc] = None
+
+
 class CombinedRequest(BaseModel):
     person_a: BirthData
     person_b: BirthData
@@ -83,7 +90,7 @@ class CombinedRequest(BaseModel):
 
 class ReportRequest(BaseModel):
     chart_type: str = Field("natal",
-        description="natal | transit | solar_return | progressed | combined")
+        description="natal | transit | weekly | solar_return | progressed | combined")
     format: str = Field("pdf", description="pdf | docx")
     chart_png: Optional[str] = Field(None, description="Imagen de la rueda (data URL base64)")
     chart_png2: Optional[str] = Field(None, description="Segunda rueda (retorno/progresada, data URL)")
@@ -98,6 +105,7 @@ class ReportRequest(BaseModel):
     year: Optional[int] = None
     reloc: Optional[Reloc] = None
     target_date: Optional[str] = None
+    week_date: Optional[str] = None
     person_a: Optional[BirthData] = None
     person_b: Optional[BirthData] = None
 
@@ -109,7 +117,7 @@ def root():
         "service": "Diario Astral API",
         "engine": "Swiss Ephemeris (pyswisseph)",
         "endpoints": ["/health", "POST /api/natal", "POST /api/transits",
-                      "/api/interpretations"],
+                      "POST /api/weekly", "/api/interpretations"],
     }
 
 
@@ -169,6 +177,18 @@ def progressed(req: ProgressedRequest):
         raise HTTPException(status_code=400, detail=f"No se pudo calcular: {e}")
 
 
+@app.post("/api/weekly")
+def weekly(req: WeeklyRequest):
+    """Tránsitos semanales (lunes 00:00 a domingo) sobre la carta natal."""
+    try:
+        reloc = None
+        if req.reloc:
+            reloc = {"lat": req.reloc.lat, "lon": req.reloc.lon, "tz": req.reloc.tz}
+        return astro.compute_weekly(_bd(req.natal), req.week_date, reloc)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"No se pudo calcular: {e}")
+
+
 @app.post("/api/combined")
 def combined(req: CombinedRequest):
     try:
@@ -208,6 +228,14 @@ def make_report(req: ReportRequest):
             if req.reloc:
                 reloc = {"lat": req.reloc.lat, "lon": req.reloc.lon, "tz": req.reloc.tz}
             data = astro.compute_progressed(_bd(req.natal), req.target_date, reloc)
+            data["reloc_city"] = (req.reloc.city if req.reloc else "") or req.city
+        elif ct == "weekly":
+            if not (req.natal and req.week_date):
+                raise ValueError("Faltan datos natales o la fecha de la semana.")
+            reloc = None
+            if req.reloc:
+                reloc = {"lat": req.reloc.lat, "lon": req.reloc.lon, "tz": req.reloc.tz}
+            data = astro.compute_weekly(_bd(req.natal), req.week_date, reloc)
             data["reloc_city"] = (req.reloc.city if req.reloc else "") or req.city
         elif ct == "combined":
             if not (req.person_a and req.person_b):

@@ -365,7 +365,7 @@ def _page1(d, L, data, web):
     # 3.2 Rueda + columna derecha
     top, bh = 166, 485
     d.rr(ML, top, 400, bh, 14, fill=WHITE, stroke=HAIR, lw=1)
-    _kicker(d, ML + 200, top + 24, "EL CIELO DEL LUNES SOBRE SU CARTA NATAL", align='c',
+    _kicker(d, ML + 200, top + 24, "ASÍ COMIENZA LA SEMANA SOBRE SU CARTA NATAL", align='c',
             size=8.5)
     wcy = top + 34 + 178
     size_px = 1000.0 * 178.0 / 524.0
@@ -408,11 +408,16 @@ def _page1(d, L, data, web):
     # columna derecha
     rx, rw = 458, 296
     iw = rw - 36
-    hp = d.ph(esc(L['frase']), iw, 'mi', 15, WHITE, 1.5)
-    fh = 16 + 14 + 6 + hp + 16
+    fsz = 15.0
+    while fsz > 12 and d.ph(esc(L['frase']), iw, 'mi', fsz, WHITE, 1.5) > 150:
+        fsz -= 0.5
+    hp = d.ph(esc(L['frase']), iw, 'mi', fsz, WHITE, 1.5)
+    fh = 16 + 14 + 6 + hp + 8 + 12 + 14
     d.rr(rx, top, rw, fh, 14, fill=NAVY)
     _kicker(d, rx + 18, top + 27, "SU SEMANA EN UNA FRASE", GOLD_S, 8.5)
-    d.para(rx + 18, top + 36, iw, esc(L['frase']), 'mi', 15, WHITE, 1.5)
+    d.para(rx + 18, top + 36, iw, esc(L['frase']), 'mi', fsz, WHITE, 1.5)
+    s_, z_ = d.fit(L.get('frase_fuente', ''), 'r', 9, iw, 0, 7)
+    d.tx(rx + 18, top + 36 + hp + 16, s_, 'r', z_, GOLD_S)
 
     ey = top + fh + 14
     eh = top + bh - ey
@@ -716,7 +721,7 @@ def _page3(d, L, data, web, brand):
     c = d.c
     _runhead(d, L)
     y0 = _titulo(d, "PÁGINA 3", "Lo que el cielo le hace a usted",
-                 "Su Sol, su Luna y su Ascendente, uno por uno.") + 4
+                 "Su Sol, su Luna, su Ascendente y su regente, uno por uno.") + 4
     RX, RW = ML + 150 + 18, CW - 150 - 18
 
     def textos(m):
@@ -731,9 +736,12 @@ def _page3(d, L, data, web, brand):
 
     filas = L['tablero']['filas']
     nrows = max(1, len(filas))
-    LW = 186.0
-    W4 = CW - 36 - (162 + LW + 12 + 162)
-    fila_h = [max(31.0, d.ph(esc(f['hacer']), W4, 'r', 10, INK, 1.25) + 10) for f in filas] or [31.0]
+    LW = 168.0
+    C3W = 128.0
+    W4 = CW - 36 - (156 + LW + 12 + C3W + 10)
+    fila_h = [max(31.0, d.ph(esc(f['hacer']), W4, 'r', 10, INK, 1.25) + 10,
+                  d.ph('<b>%s</b> · %s' % (f['casa'], esc(f['casa_corto'])), C3W, 'r',
+                       10.5, INK, 1.25) + 10) for f in filas] or [31.0]
     tab_h = 14 + 22 + 18 + sum(fila_h) + 24 + 12
     cl_h = 12 + 14 + 22 + max(d.ph(esc(k[2]), (CW - 20) / 3.0 - 28, 'r', 11, INK, 1.5)
                               for k in L['claves']) + 14
@@ -751,13 +759,43 @@ def _page3(d, L, data, web, brand):
     fijo = tab_h + cl_h + cta_h + lg_h + 10
     disp = (1079 - 10) - y0
 
-    txts, rows_h = [], []
-    for m in (300, 270, 240, 210, 180, 150, 120):
+    R = L.get('regente')
+
+    def meta_reg():
+        """Línea de movimientos y aspectos del regente (markup)."""
+        if not R:
+            return ''
+        bits = [esc(m_) for m_ in R['movs']]
+        for a in R['aspectos']:
+            cg, gg, _ = rc.ASPECTS[a['typ'].lower()]
+            bits.append(G(gg, cg, 10) + '&nbsp;' + esc(a['txt']))
+        if not R['aspectos']:
+            bits.append("sin aspectos exactos a su carta esta semana")
+        return ' · '.join(bits)
+
+    def reg_h(t):
+        if not R:
+            return 0
+        return 20 + max(40, 20 + d.ph(meta_reg(), RW, 'r', 10, MUTED, 1.45) + 4
+                        + (d.ph(esc(t), RW, 'r', 11.5, INK, 1.6) if t else 0))
+
+    txts, rows_h, rtxt = [], [], ''
+    for m in (300, 270, 240, 210, 180, 150, 120, 100):
         txts = textos(m)
+        rtxt = resumen(R['texto'], 60, max(90, m - 60)) if R and R['texto'] else ''
         rows_h = [20 + max(40, 20 + d.ph(esc(t), RW, 'r', 11.5, INK, 1.6)) for t in txts]
-        if sum(rows_h) + fijo + 3 * 12 <= disp:
+        if sum(rows_h) + reg_h(rtxt) + fijo + 3 * 12 <= disp:
             break
-    libre = disp - sum(rows_h) - fijo
+    else:
+        # último recurso: textos de una oración y regente sin interpretación
+        rtxt = ''
+        txts = [wl.recorta(t, 110) for t in txts]
+        rows_h = [20 + max(40, 20 + d.ph(esc(t), RW, 'r', 11.5, INK, 1.6)) for t in txts]
+    import sys
+    if sum(rows_h) + reg_h(rtxt) + fijo + 30 > disp:
+        sys.stderr.write("weekly_pdf: página 3 excede %.0f px\n"
+                         % (sum(rows_h) + reg_h(rtxt) + fijo + 30 - disp))
+    libre = disp - sum(rows_h) - reg_h(rtxt) - fijo
     gap = max(10.0, min(40.0, libre / 3.0))
 
     # 5.2 Sol / Luna / Ascendente
@@ -784,6 +822,20 @@ def _page3(d, L, data, web, brand):
             d.tx(RX, y + 10 + 12.5, p['calma'], 'sb', 12, MUTED)
         d.para(RX, y + 10 + 18, RW, esc(t), 'r', 11.5, INK, 1.6)
         y += h
+    if R:
+        h = reg_h(rtxt)
+        d.ln(ML, y, PW - ML, y, HAIR, 1)
+        d.circ(ML + 18, y + 10 + 18, 18, fill=TINT)
+        d.planet(R['key'], ML + 18, y + 10 + 18, 20)
+        d.tx(ML + 46, y + 10 + 15, "Su regente", 'b', 13, NAVY)
+        d.para(ML + 46, y + 10 + 19, 104, esc(R['pos']), 'r', 9, MUTED, 1.3)
+        d.planet(R['key'], RX + 7, y + 10 + 8, 14)
+        s_, z_ = d.fit(R['linea'], 'sb', 12, RW - 18, 0, 9.5)
+        d.tx(RX + 18, y + 10 + 12.5, s_, 'sb', z_, GOLD_D)
+        mh = d.para(RX, y + 10 + 18, RW, meta_reg(), 'r', 10, MUTED, 1.45)
+        if rtxt:
+            d.para(RX, y + 10 + 18 + mh + 4, RW, esc(rtxt), 'r', 11.5, INK, 1.6)
+        y += h
     d.ln(ML, y, PW - ML, y, HAIR, 1)
     y += gap
 
@@ -794,7 +846,7 @@ def _page3(d, L, data, web, brand):
     if L['tablero']['directos']:
         s, sz = d.fit(L['tablero']['directos'], 'i', 9.5, CW - 36 - wt - 16, 0, 7.5)
         d.tx(PW - ML - 18, y + 14 + 13, s, 'i', sz, MUTED, 'r')
-    c1, c2, c3, c4 = ix, ix + 162, ix + 162 + LW + 12, ix + 162 + LW + 12 + 162
+    c1, c2, c3, c4 = ix, ix + 156, ix + 156 + LW + 12, ix + 156 + LW + 12 + C3W + 10
     w4 = (ML + CW - 18) - c4
     hy = y + 14 + 22 + 12
     d.tx(c1, hy, "PLANETA", 'sb', 8, GOLD_D, track=1.2)
@@ -837,7 +889,7 @@ def _page3(d, L, data, web, brand):
             d.rr(lx - 2, cy - 6, lw_ + 4, 12, fill=CREAM)
             d.tx(lx, cy + 2.9, f['label'], 'b', 8, dc)
             d.diamond(xh, cy, 5, fill=dc)
-        d.para(c3, cy - 9.5, 156, '<font color="%s"><b>%s</b></font> · %s'
+        d.para(c3, cy - 9.5, C3W, '<font color="%s"><b>%s</b></font> · %s'
                % (NAVY, f['casa'], esc(f['casa_corto'])), 'r', 10.5, INK, 1.25)
         hh = d.ph(esc(f['hacer']), w4, 'r', 10, INK, 1.25)
         d.para(c4, cy - hh / 2.0 - 1, w4, esc(f['hacer']), 'r', 10, INK, 1.25)
@@ -906,12 +958,25 @@ def _page3(d, L, data, web, brand):
         else:
             d.rr(bx, yy, 150, 34, 17, stroke=GOLD_S, lw=1)
             wl_ = d.tw(lab, 'sb', 10.5)
-            sx = bx + 75 - (wl_ + 16) / 2.0
-            d.gch(ic, sx + 5, yy + 17, 10, GOLD_S)
-            d.tx(sx + 16, yy + 20.7, lab, 'sb', 10.5, WHITE)
+            icf = os.path.join(_ASSETS, 'icon_google_play.png' if j == 0 else 'icon_apple.png')
+            if os.path.exists(icf):
+                isz = 17.0
+                sx = bx + 75 - (wl_ + isz + 8) / 2.0
+                try:
+                    c.drawImage(ImageReader(icf), X(sx), Y(yy + 17 + isz / 2.0), isz * K, isz * K,
+                                mask='auto', preserveAspectRatio=True, anchor='c')
+                except Exception:
+                    pass
+                d.tx(sx + isz + 8, yy + 20.7, lab, 'sb', 10.5, WHITE)
+            else:
+                sx = bx + 75 - (wl_ + 16) / 2.0
+                d.gch(ic, sx + 5, yy + 17, 10, GOLD_S)
+                d.tx(sx + 16, yy + 20.7, lab, 'sb', 10.5, WHITE)
         url = (brand or {}).get(key)
         if url:
             c.linkURL(url, (X(bx), Y(yy + 34), X(bx + 150), Y(yy)), relative=0)
+    if (brand or {}).get('app_android'):
+        c.linkURL(brand['app_android'], (X(lx), Y(ly2 + 84), X(lx + 84), Y(ly2)), relative=0)
     wurl = (brand or {}).get('web_url')
     if wurl:
         c.linkURL(wurl, (X(tx_), Y(ty + th), X(tx_ + ctw), Y(ty)), relative=0)

@@ -628,6 +628,24 @@ def compute_weekly(natal, week_date, reloc=None):
                 break
     stations.sort(key=lambda s: s['jd'])
 
+    # Fin de la retrogradación (fecha en que el planeta queda directo), para
+    # los que siguen retrógrados o se vuelven retrógrados esta semana.
+    retro_end = {}
+    _pid = {k: (pid, flag) for k, _n, pid, flag in PLANETS}
+    for k in set(retro_now) | {x['key'] for x in stations if x['kind'] == 'retrograde'}:
+        pid, flag = _pid[k]
+        t0 = next((x['jd'] for x in stations if x['key'] == k
+                   and x['kind'] == 'retrograde'), jd0)
+        t, prev = t0 + 0.5, _wk_pos(t0 + 0.5, pid, flag)[1]
+        for _ in range(420):                       # hasta ~14 meses
+            t2 = t + 1.0
+            sp2 = _wk_pos(t2, pid, flag)[1]
+            if prev < 0 <= sp2:
+                tt = _bisect(lambda x: _wk_pos(x, pid, flag)[1], t, t2)
+                retro_end[k] = _stamp(tt, tz)
+                break
+            t, prev = t2, sp2
+
     # ── Fases de la Luna (8 fases de 45°) ─────────────────────────────────
     def elong(t):
         return (_wk_pos(t, swe.MOON, _MOS)[0] - _wk_pos(t, swe.SUN, _MOS)[0]) % 360.0
@@ -693,6 +711,6 @@ def compute_weekly(natal, week_date, reloc=None):
                  'relocated': bool(reloc)},
         'targets': {k: _where(v, cusps) for k, v in targets.items()},
         'aspects': aspects, 'moon_aspects': moon_aspects,
-        'stations': stations, 'retro_now': retro_now,
+        'stations': stations, 'retro_now': retro_now, 'retro_end': retro_end,
         'phase_start': phase_start, 'phases': phases,
     }

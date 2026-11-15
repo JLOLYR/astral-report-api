@@ -891,9 +891,22 @@ def _page3(d, L, data, web, brand):
         d.ln(ix, ry, PW - ML - 18, ry, SEP, 1)
         cy = ry + fh_ / 2.0
         d.planet(f['key'], c1 + 8, cy, 15)
-        wn = d.tx(c1 + 22, cy + 4, f['name'], 'sb', 11, NAVY)
-        d.tx(c1 + 22 + wn + 6, cy + 3.5, f['estado_txt'], 'sb', 8.5,
+        dy = -4.5 if f.get('sub') else 0
+        wn = d.tx(c1 + 22, cy + 4 + dy, f['name'], 'sb', 11, NAVY)
+        d.tx(c1 + 22 + wn + 6, cy + 3.5 + dy, f['estado_txt'], 'sb', 8.5,
              GOLD_D if f['estado'] == 'D' else RETRO)
+        if f.get('sub'):
+            pre, _, rest = f['sub'].partition(' · ')
+            rest = (' · ' + rest) if rest else ''
+            si = f.get('sub_sign')
+            z_ = 8.5
+            while z_ > 6.5 and d.tw(pre + rest, 'r', z_) + (11 if si is not None else 0) > 156 - 24:
+                z_ -= 0.25
+            xx = c1 + 22 + d.tx(c1 + 22, cy + 11, pre, 'r', z_, MUTED)
+            if si is not None:
+                d.gch(rc.SIGN_GLYPH[si], xx + 6, cy + 8, z_ + 1, rc.SIGN_COL[si])
+                xx += 11
+            d.tx(xx, cy + 11, rest, 'r', z_, MUTED)
         # línea de la semana
         for k in range(1, 7):
             d.rr(c2 + LW * k / 7.0 - 0.5, cy - 4, 1, 8, fill=HAIR)

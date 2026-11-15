@@ -570,7 +570,16 @@ def build_layout(data, interp, name='', city=''):
             h = snap[k]['natal_house'] if k in snap else 1
             lab = ''
             hrs = None
-        filas.append({'key': k, 'name': NOMBRE[k], 'estado': estado,
+        sp_ = snap.get(k, {})
+        sub = "en %s" % sp_.get('sign_es', '') if sp_ else ""
+        re_ = (data.get('retro_end') or {}).get(k)
+        if re_ and estado in ('retro', 'R'):
+            y_, m_, d_ = _fecha(re_['date'])
+            anio = "" if y_ == y1 else " %d" % y_
+            sub += " · directo el %d %s%s" % (d_, MESES_AB[m_ - 1], anio)
+        sidx = SIGNOS_EN.index(sp_['sign']) if sp_ else None
+        filas.append({'key': k, 'name': NOMBRE[k], 'estado': estado, 'sub': sub,
+                      'sub_sign': sidx,
                       'estado_txt': {'R': 'se vuelve R', 'D': 'queda directo',
                                      'retro': 'retrógrado'}[estado],
                       'hours': hrs, 'label': lab,

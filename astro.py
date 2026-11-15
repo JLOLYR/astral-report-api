@@ -398,3 +398,267 @@ def compute_combined(person_a, person_b):
     comb = _assemble(positions, cusps, asc, mc,
                      {'label': 'Carta combinada', 'house_system': 'Composite (puntos medios)'})
     return {'a': ca, 'b': cb, 'combined': comb}
+
+
+# ════════════════════════════════════════════════════════════════════════
+#  TRÁNSITOS SEMANALES (resumen de lunes 00:00 a domingo 24:00, hora local)
+# ════════════════════════════════════════════════════════════════════════
+
+# Cuerpos que se siguen durante la semana (la Luna se trata aparte)
+_WK_BODIES = [k for k in PLANETS if k[0] not in ('aLuna', 'aLunaNegra')]
+_WK_STATION = ('aMercurio', 'aVenus', 'aMarte', 'aJupiter', 'aSaturno',
+               'aUrano', 'aNeptuno', 'aPluton', 'aChiron')
+_WK_SLOW = ('aJupiter', 'aSaturno', 'aUrano', 'aNeptuno', 'aPluton',
+            'aChiron', 'aNoduloNorte')
+# (ángulo sobre el círculo, tipo, tipo_es)
+_WK_ANGLES = [(0, 'Conjunction', 'Conjunción'), (60, 'Sextile', 'Sextil'),
+              (90, 'Square', 'Cuadratura'), (120, 'Trine', 'Trígono'),
+              (180, 'Opposition', 'Oposición'), (240, 'Trine', 'Trígono'),
+              (270, 'Square', 'Cuadratura'), (300, 'Sextile', 'Sextil')]
+PHASES_ES = ['Luna Nueva', 'Luna Creciente', 'Cuarto Creciente', 'Luna Gibosa',
+             'Luna Llena', 'Luna Menguante', 'Cuarto Menguante', 'Luna Balsámica']
+DIAS_ES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+
+
+def _wk_pos(jd, pid, flag):
+    r = swe.calc_ut(jd, pid, flag)
+    return r[0][0] % 360.0, r[0][3]
+
+
+def _wdiff(a, b):
+    """Diferencia con signo a−b en (−180, 180]."""
+    return ((a - b + 180.0) % 360.0) - 180.0
+
+
+def _local_dt(jd, tz):
+    """JD (UT) → datetime en la hora local de `tz` (IANA u offset fijo)."""
+    from datetime import timedelta, timezone
+    y, m, d, hd = swe.revjul(jd)
+    ut = datetime(int(y), int(m), int(d)) + timedelta(hours=hd)
+    ut = (ut + timedelta(seconds=30)).replace(second=0, microsecond=0)
+    tz = (tz or '').strip()
+    try:
+        from zoneinfo import ZoneInfo
+        if tz and tz[0] not in '+-' and not tz.replace('.', '').isdigit():
+            return ut.replace(tzinfo=timezone.utc).astimezone(ZoneInfo(tz)).replace(tzinfo=None)
+    except Exception:
+        pass
+    return ut + timedelta(hours=offset_hours(tz, ut.year, ut.month, ut.day, ut.hour, ut.minute))
+
+
+def _bisect(f, a, b, n=40):
+    fa = f(a)
+    for _ in range(n):
+        m = (a + b) / 2.0
+        fm = f(m)
+        if (fa <= 0) == (fm <= 0):
+            a, fa = m, fm
+        else:
+            b = m
+    return (a + b) / 2.0
+
+
+def _stamp(jd, tz):
+    dt = _local_dt(jd, tz)
+    return {'jd': round(jd, 5), 'local': dt.strftime('%Y-%m-%d %H:%M'),
+            'date': dt.strftime('%Y-%m-%d'), 'time': dt.strftime('%H:%M'),
+            'weekday': dt.weekday(), 'weekday_es': DIAS_ES[dt.weekday()]}
+
+
+def _where(lon, cusps):
+    idx, sen, ses = _sign(lon)
+    deg, minute = _dms(lon)
+    return {'lon': round(lon, 4), 'sign': sen, 'sign_es': ses, 'deg': deg,
+            'min': minute, 'natal_house': _house_of(lon, cusps)}
+
+
+def compute_weekly(natal, week_date, reloc=None):
+    """Resumen semanal de tránsitos sobre la carta natal.
+
+    La semana va del lunes 00:00 al lunes siguiente 00:00, en la hora local
+    del lugar natal o —si se relocaliza— del lugar indicado en `reloc`
+    ({'lat','lon','tz'}). `week_date` es cualquier día de la semana deseada.
+
+    Devuelve la carta natal, el cielo del lunes a las 00:00 (bi-rueda) y:
+      aspects      → aspectos de los planetas al Sol, la Luna y el Asc natales
+      moon_aspects → conjunciones/oposiciones de la Luna a esos tres puntos
+      stations     → planetas que inician o terminan su retrogradación
+      phases       → fases lunares (de las 8) que comienzan en la semana
+    """
+    from datetime import timedelta
+    if os.path.isdir(_EPHE):
+        swe.set_ephe_path(_EPHE)
+    lat = (reloc or {}).get('lat', natal['lat'])
+    lon_ = (reloc or {}).get('lon', natal['lon'])
+    tz = (reloc or {}).get('tz') or natal.get('tz') or '+00:00'
+    # Relocalizado: mismo instante natal, casas (y Ascendente) del lugar elegido.
+    # Los planetas natales no cambian.
+    if reloc:
+        base = compute_chart(natal['date'], natal['time'], lat, lon_,
+                             natal.get('tz', ''), natal.get('hsys', 'P'))
+        base['input']['relocated'] = True
+    else:
+        base = compute_chart(**natal)
+
+    d0 = datetime.strptime(week_date.replace('/', '-')[:10], '%Y-%m-%d')
+    monday = d0 - timedelta(days=d0.weekday())
+    nxt = monday + timedelta(days=7)
+    jd0, _ = julian_day(monday.strftime('%Y-%m-%d'), '00:00', tz)
+    jd1, _ = julian_day(nxt.strftime('%Y-%m-%d'), '00:00', tz)
+
+    # Cielo del lunes 00:00 (para la bi-rueda y el clima general)
+    snap = compute_chart(monday.strftime('%Y-%m-%d'), '00:00', lat, lon_, tz,
+                         natal.get('hsys', 'P'))
+    cusps = [h['lon'] for h in base['houses']]
+    for p in snap['planets']:
+        p['natal_house'] = _house_of(p['lon'], cusps)
+    natal_pos = {p['key']: p['lon'] for p in base['planets']}
+    snap_pos = {p['key']: p['lon'] for p in snap['planets']}
+    # Cielo del lunes siguiente 00:00 (para las flechas de recorrido semanal)
+    snap_end = compute_chart(nxt.strftime('%Y-%m-%d'), '00:00', lat, lon_, tz,
+                             natal.get('hsys', 'P'))
+    end_pos = {p['key']: {'lon': p['lon'], 'sign': p['sign'], 'sign_es': p['sign_es'],
+                          'natal_house': _house_of(p['lon'], cusps)}
+               for p in snap_end['planets']}
+
+    targets = {'aSol': natal_pos.get('aSol'), 'aLuna': natal_pos.get('aLuna'),
+               'aAsc': base['angles']['asc']['lon']}
+    targets = {k: v for k, v in targets.items() if v is not None}
+
+    step = 1.0 / 24.0                      # muestreo cada hora
+    n = int(round((jd1 - jd0) / step))
+    grid = [jd0 + i * step for i in range(n)] + [jd1]
+
+    def scan(key, pid, flag, only=None):
+        """Aspectos exactos (o en orbe estrecho) de un cuerpo durante la semana."""
+        out = []
+        try:
+            lons = [_wk_pos(t, pid, flag)[0] for t in grid]
+        except Exception:
+            return out
+        max_orb = 1.5 if key in _WK_SLOW else 1.0
+        for tk, tl in targets.items():
+            for ang, typ, typ_es in _WK_ANGLES:
+                if only and typ not in only:
+                    continue
+                goal = (tl + ang) % 360.0
+                ds = [_wdiff(l, goal) for l in lons]
+                hit = None
+                for i in range(len(ds) - 1):
+                    a, b = ds[i], ds[i + 1]
+                    if abs(a) < 20 and abs(b) < 20 and (a <= 0) != (b <= 0):
+                        hit = _bisect(lambda t: _wdiff(_wk_pos(t, pid, flag)[0], goal),
+                                      grid[i], grid[i + 1])
+                        break
+                best = min(abs(x) for x in ds)
+                if hit is None and (only or best > max_orb):
+                    continue
+                ev = {'transit': key, 'natal': tk, 'type': typ, 'type_es': typ_es,
+                      'angle': ang if ang <= 180 else 360 - ang,
+                      'exact': hit is not None, 'orb': round(best, 2),
+                      'applying': abs(ds[-1]) < abs(ds[0])}
+                if hit is not None:
+                    ev['orb'] = 0.0
+                    ev.update(_stamp(hit, tz))
+                    ev['at'] = _where(_wk_pos(hit, pid, flag)[0], cusps)
+                out.append(ev)
+        return out
+
+    aspects = []
+    for key, name, pid, flag in _WK_BODIES:
+        aspects += scan(key, pid, flag)
+    # un aspecto por terna (el nodo verdadero oscila y puede repetir)
+    seen, uniq = set(), []
+    for a in aspects:
+        k = (a['transit'], a['natal'], a['type'], a['angle'])
+        if k not in seen:
+            seen.add(k); uniq.append(a)
+    aspects = sorted(uniq, key=lambda a: (0 if a['exact'] else 1, a.get('jd', 0)))
+
+    moon_all = sorted(scan('aLuna', swe.MOON, _MOS,
+                           only=('Conjunction', 'Opposition', 'Square',
+                                 'Trine', 'Sextile')),
+                      key=lambda a: a.get('jd', 0))
+    moon_aspects = [a for a in moon_all if a['type'] in ('Conjunction', 'Opposition')]
+
+    # ── Cambios de signo (todos los planetas, incluida la Luna) ───────────
+    ingresses = []
+    for key, name, pid, flag in PLANETS:
+        if key in ('aNoduloNorte', 'aLunaNegra'):
+            continue
+        try:
+            ls = [_wk_pos(t, pid, flag)[0] for t in grid]
+        except Exception:
+            continue
+        for i in range(len(ls) - 1):
+            sa, sb = int(ls[i] // 30), int(ls[i + 1] // 30)
+            if sa != sb:
+                retro = _wdiff(ls[i + 1], ls[i]) < 0
+                goal = (sa * 30.0) if retro else (sb * 30.0)
+                t = _bisect(lambda x: _wdiff(_wk_pos(x, pid, flag)[0], goal),
+                            grid[i], grid[i + 1])
+                ev = {'key': key, 'name': name, 'retrograde': retro,
+                      'sign': SIGNS_EN[sb % 12], 'sign_es': SIGNS_ES[sb % 12],
+                      'sign_index': sb % 12}
+                ev.update(_stamp(t, tz))
+                ingresses.append(ev)
+    ingresses.sort(key=lambda e: e['jd'])
+
+    # ── Planetas que se detienen (inicio / fin de retrogradación) ─────────
+    stations, retro_now = [], []
+    for key, name, pid, flag in PLANETS:
+        if key not in _WK_STATION:
+            continue
+        try:
+            sp = [_wk_pos(t, pid, flag)[1] for t in grid]
+        except Exception:
+            continue
+        if sp[0] < 0:
+            retro_now.append(key)
+        for i in range(len(sp) - 1):
+            if (sp[i] <= 0) != (sp[i + 1] <= 0):
+                t = _bisect(lambda x: _wk_pos(x, pid, flag)[1], grid[i], grid[i + 1])
+                ev = {'key': key, 'name': name,
+                      'kind': 'retrograde' if sp[i] > 0 else 'direct'}
+                ev.update(_stamp(t, tz))
+                ev['hours'] = round((t - jd0) * 24.0, 2)
+                ev['at'] = _where(_wk_pos(t, pid, flag)[0], cusps)
+                stations.append(ev)
+                break
+    stations.sort(key=lambda s: s['jd'])
+
+    # ── Fases de la Luna (8 fases de 45°) ─────────────────────────────────
+    def elong(t):
+        return (_wk_pos(t, swe.MOON, _MOS)[0] - _wk_pos(t, swe.SUN, _MOS)[0]) % 360.0
+
+    def phase_info(t, idx):
+        ml = _wk_pos(t, swe.MOON, _MOS)[0]
+        sl = _wk_pos(t, swe.SUN, _MOS)[0]
+        ev = {'index': idx, 'name': PHASES_ES[idx], 'moon': _where(ml, cusps),
+              'sun': _where(sl, cusps), 'elong': round((ml - sl) % 360.0, 2)}
+        ev.update(_stamp(t, tz))
+        return ev
+
+    es = [elong(t) for t in grid]
+    phase_start = phase_info(jd0, int(es[0] // 45) % 8)
+    phases = []
+    for i in range(len(es) - 1):
+        ia, ib = int(es[i] // 45) % 8, int(es[i + 1] // 45) % 8
+        if ia != ib:
+            goal = (ib * 45) % 360
+            t = _bisect(lambda x: _wdiff(elong(x), goal), grid[i], grid[i + 1])
+            phases.append(phase_info(t, ib))
+
+    sunday = monday + timedelta(days=6)
+    return {
+        'natal': base, 'transit': snap, 'transit_end': end_pos,
+        'ingresses': ingresses, 'moon_all': moon_all,
+        'cross_aspects': _cross_aspects(snap_pos, natal_pos, 'transit', 'natal'),
+        'week': {'start': monday.strftime('%Y-%m-%d'), 'end': sunday.strftime('%Y-%m-%d'),
+                 'tz': tz, 'lat': float(lat), 'lon': float(lon_),
+                 'relocated': bool(reloc)},
+        'targets': {k: _where(v, cusps) for k, v in targets.items()},
+        'aspects': aspects, 'moon_aspects': moon_aspects,
+        'stations': stations, 'retro_now': retro_now,
+        'phase_start': phase_start, 'phases': phases,
+    }

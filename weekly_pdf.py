@@ -74,6 +74,39 @@ def _fonts():
     return _F
 
 
+ASSETS = _ASSETS
+
+
+def nodash(s):
+    """Sin rayas ni guiones largos (regla del diseño v2)."""
+    if not s:
+        return s
+    return (s.replace(' — ', ', ').replace(' – ', ', ').replace('—', ', ')
+            .replace('–', '-'))
+
+
+_FADE = {}
+
+
+def faded(path, alpha, width_px=None):
+    """PNG con la opacidad aplicada (en caché), como ImageReader."""
+    key = (path, alpha, width_px)
+    if key in _FADE:
+        return _FADE[key]
+    try:
+        from PIL import Image
+        im = Image.open(path).convert('RGBA')
+        if width_px and im.width > width_px:
+            im = im.resize((width_px, int(im.height * width_px / im.width)), Image.LANCZOS)
+        a = im.split()[-1].point(lambda v: int(v * alpha))
+        im.putalpha(a)
+        r = ImageReader(im)
+    except Exception:
+        r = None
+    _FADE[key] = r
+    return r
+
+
 def X(x):
     return x * K
 
@@ -110,6 +143,11 @@ class D(object):
     def __init__(self, c):
         self.c = c
         self.f = _fonts()
+        self.off = 0                 # desplazamiento de numeración de página
+
+    X = staticmethod(lambda x: x * K)
+    Y = staticmethod(lambda y: (PH - y) * K)
+    esc = staticmethod(lambda t: esc(t))
 
     # formas ---------------------------------------------------------------
     def rr(self, x, y, w, h, r=0, fill=None, stroke=None, lw=1, alpha=1.0):
@@ -191,6 +229,7 @@ class D(object):
     def tx(self, x, y, s, font='r', size=11, col=INK, align='l', track=0):
         """Texto de una línea; y = línea base (px)."""
         c = self.c
+        s = nodash(s)
         fn = self.f.get(font, font)
         w = self.tw(s, font, size, track)
         if align == 'c':
@@ -215,7 +254,7 @@ class D(object):
         st = ParagraphStyle('p', fontName=self.f.get(font, font), fontSize=size * K,
                             leading=size * lead * K, textColor=HexColor(col),
                             alignment={'l': TA_LEFT, 'c': TA_CENTER, 'r': TA_RIGHT}[align])
-        p = Paragraph(markup, st)
+        p = Paragraph(nodash(markup), st)
         _, h = p.wrap(w * K, 10000)
         return p, h / K
 
@@ -294,8 +333,24 @@ def _footer(d, n, web):
     d.tx(ML + w + 8, 1097, "·  Tránsitos Semanales  ·  Mauricio Puerta  ·  " + web,
          'r', 9, MUTED)
     cx, cy = PW - ML - 11, 1094
+    n = n + getattr(d, 'off', 0)
     d.diamond(cx, cy, 11.3, stroke=GOLD, lw=1)
     d.tx(cx, cy + 3.2, str(n), 'sb', 9, INK, 'c')
+
+
+def footer(d, n, web):
+    _footer(d, n, web)
+
+
+def _const_bg(d, y0=110, alpha=0.22):
+    """Fondo de constelaciones (3 copias apiladas de 794 × 461)."""
+    img = faded(os.path.join(_ASSETS, 'fondo_constelaciones.png'), alpha, 1000)
+    if img is None:
+        return
+    for k in range(3):
+        y = y0 + k * 461
+        if y < PH:
+            d.c.drawImage(img, X(0), Y(y + 461), PW * K, 461 * K, mask='auto')
 
 
 def _runhead(d, L):
@@ -306,7 +361,7 @@ def _runhead(d, L):
     if L.get('natal_lugar'):
         quien += ", " + L['natal_lugar']
     bits.append(quien.upper())
-    s = "  —  ".join(bits)
+    s = "  ·  ".join(bits)
     track = 2.0
     while track > 0.4 and d.tw(s, 'r', 10, track) > CW:
         track -= 0.2
@@ -334,8 +389,17 @@ def _kicker(d, x, y, s, col=GOLD_D, size=9, align='l'):
 
 def _page1(d, L, data, web):
     c = d.c
+    d.c.bookmarkPage("pag%d" % (1 + d.off))
+    d.c.addOutlineEntry("El cielo y la agenda", "pag%d" % (1 + d.off), level=1)
+    _const_bg(d, 110, 0.22)
     # 3.1 Encabezado
     d.rr(0, 0, PW, 150, fill=NAVY)
+    c.saveState()
+    _p = c.beginPath(); _p.rect(0, Y(150), PW * K, 150 * K); c.clipPath(_p, stroke=0, fill=0)
+    _rd = faded(os.path.join(_ASSETS, 'rueda_dorada.png'), 0.22, 450)
+    if _rd is not None:
+        c.drawImage(_rd, X(300), Y(-95 + 340), 340 * K, 340 * K, mask='auto')
+    c.restoreState()
     d.rr(10, 10, PW - 20, 130, stroke=GOLD_S, lw=1)
     c.saveState(); c.setStrokeAlpha(0.5)
     d.rr(14, 14, PW - 28, 122, stroke=GOLD_S, lw=0.75)
@@ -358,7 +422,7 @@ def _page1(d, L, data, web):
     d.tx(xa, 97, s, 'r', sz, CREAM)
     _kicker(d, xb, 58, "SEMANA", GOLD_S, 8.5)
     d.tx(xb, 79, "%s · 00:00 h" % L['sem_inicio'], 'r', 11, CREAM)
-    s, sz = d.fit((L['lugar'] or '') + "*", 'r', 11, wb, 0, 8.5)
+    s, sz = d.fit((L['lugar'] or ''), 'r', 11, wb, 0, 8.5)
     d.tx(xb, 97, s, 'r', sz, CREAM)
 
     # 3.2 Rueda + columna derecha
@@ -470,7 +534,7 @@ def _page1(d, L, data, web):
     cxs = [ML + colw / 2.0 + i * (colw + gap) for i in range(7)]
     ny = T + 31
     d.ln(cxs[0], ny, cxs[-1], ny, GOLD, 1)
-    nota_h = d.ph(esc(L['nota']), CW, 'r', 8.5, MUTED, 1.45)
+    nota_h = -10                       # la nota con asterisco va en la página esencial
     limite = 1079 - 10 - nota_h - 10
     ev0 = ny + 15 + 12
 
@@ -531,7 +595,6 @@ def _page1(d, L, data, web):
             y += h + 12
 
     # nota + pie
-    d.para(ML, 1079 - 10 - nota_h, CW, esc(L['nota']), 'r', 8.5, MUTED, 1.45)
     _footer(d, 1, web)
 
 
@@ -643,6 +706,9 @@ def _barra(d, x0, y0, data):
 
 
 def _page2(d, L, data, web):
+    d.c.bookmarkPage("pag%d" % (2 + d.off))
+    d.c.addOutlineEntry("Su semana de un vistazo", "pag%d" % (2 + d.off), level=1)
+    _const_bg(d, 110, 0.22)
     _runhead(d, L)
     y = _titulo(d, "PÁGINA 2", "Su semana de un vistazo",
                 "Lo esencial, para que sepa con qué viento cuenta.")
@@ -744,6 +810,9 @@ def _page2(d, L, data, web):
 
 def _page3(d, L, data, web, brand):
     c = d.c
+    c.bookmarkPage("pag%d" % (3 + d.off))
+    c.addOutlineEntry("Lo que el cielo le hace a usted", "pag%d" % (3 + d.off), level=1)
+    _const_bg(d, 110, 0.22)
     _runhead(d, L)
     y0 = _titulo(d, "PÁGINA 3", "Lo que el cielo le hace a usted",
                  "Su Sol, su Luna, su Ascendente y su regente, uno por uno.") + 4
@@ -1042,6 +1111,23 @@ def render(data, interp, name='', city='', natal_city='', brand=None):
     c.setTitle("Reporte Astral · Tránsitos Semanales" + ((" · " + L['name']) if L['name'] else ""))
     c.setAuthor("Mauricio Puerta")
     d = D(c)
+    import weekly_esencial as we
+    wk = data['week']
+    if wk.get('relocated'):
+        L['nota_esencial'] = ("* Carta relocalizada: calculada para las 00:00 del lunes en %s."
+                              % (L['lugar'] or 'el lugar elegido'))
+    else:
+        L['nota_esencial'] = ("* Calculado para las 00:00 del lunes en %s, su lugar natal. Si "
+                              "pasa la semana en otra ciudad, puede relocalizar el reporte."
+                              % (L['lugar'] or 'su ciudad natal'))
+    E = we.build_esencial(data, L)
+    # Modo B: un solo PDF (esencial · portadilla · 3 páginas avanzadas)
+    d.off = 0
+    c.bookmarkPage("esencial")
+    c.addOutlineEntry("Su semana (esencial)", "esencial", level=0)
+    we.draw_esencial(d, E, L, web, n=1); c.showPage()
+    we.draw_portadilla(d, L, web, n=2, pags=(3, 4, 5)); c.showPage()
+    d.off = 2
     _page1(d, L, data, web); c.showPage()
     _page2(d, L, data, web); c.showPage()
     _page3(d, L, data, web, brand); c.showPage()

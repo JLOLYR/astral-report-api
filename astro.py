@@ -668,6 +668,21 @@ def compute_weekly(natal, week_date, reloc=None):
             t = _bisect(lambda x: _wdiff(elong(x), goal), grid[i], grid[i + 1])
             phases.append(phase_info(t, ib))
 
+    # ── Todos los aspectos de la semana a la carta natal completa ────────
+    # (para elegir «el tránsito más importante de la semana»)
+    tg_full = {k: v for k, v in natal_pos.items()
+               if k in ('aSol', 'aLuna', 'aMercurio', 'aVenus', 'aMarte', 'aJupiter',
+                        'aSaturno', 'aUrano', 'aNeptuno', 'aPluton', 'aChiron',
+                        'aNoduloNorte')}
+    tg_full['aAsc'] = base['angles']['asc']['lon']
+    tg_full['aMc'] = base['angles']['mc']['lon']
+    all_aspects, _seen = [], set()
+    for key, name, pid, flag in _WK_BODIES:
+        for a in scan(key, pid, flag, tgts=tg_full):
+            kk = (a['transit'], a['natal'], a['type'])
+            if kk not in _seen:
+                _seen.add(kk); all_aspects.append(a)
+
     # ── Regente de la carta (planeta que rige el Ascendente natal) ───────
     _REG = {'Aries': 'aMarte', 'Taurus': 'aVenus', 'Gemini': 'aMercurio',
             'Cancer': 'aLuna', 'Leo': 'aSol', 'Virgo': 'aChiron', 'Libra': 'aVenus',
@@ -700,9 +715,21 @@ def compute_weekly(natal, week_date, reloc=None):
                  'ingresses': [x for x in ingresses if x['key'] == rk],
                  'aspects': ra}
 
+    # ── La Luna al mediodía de cada día (fase y signo) ───────────────────
+    days = []
+    for i in range(7):
+        dd = monday + timedelta(days=i)
+        jn, _ = julian_day(dd.strftime('%Y-%m-%d'), '12:00', tz)
+        ml = _wk_pos(jn, swe.MOON, _MOS)[0]
+        sl = _wk_pos(jn, swe.SUN, _MOS)[0]
+        idx, sen, ses = _sign(ml)
+        days.append({'date': dd.strftime('%Y-%m-%d'), 'weekday': i,
+                     'moon_lon': round(ml, 3), 'moon_sign': sen, 'moon_sign_es': ses,
+                     'moon_sign_index': idx, 'elong': round((ml - sl) % 360.0, 2)})
+
     sunday = monday + timedelta(days=6)
     return {
-        'ruler': ruler,
+        'ruler': ruler, 'all_aspects': all_aspects, 'days': days,
         'natal': base, 'transit': snap, 'transit_end': end_pos,
         'ingresses': ingresses, 'moon_all': moon_all,
         'cross_aspects': _cross_aspects(snap_pos, natal_pos, 'transit', 'natal'),

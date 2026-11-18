@@ -540,7 +540,7 @@ def _bg(d, path, x, y, w, h, alpha):
         d.c.drawImage(img, d.X(x), d.Y(y + h), w * 0.75, h * 0.75, mask='auto')
 
 
-def draw_esencial(d, E, L, web, n=1):
+def draw_esencial(d, E, L, web, n=1, link='internal'):
     from weekly_pdf import ASSETS, footer
     PW, ML = 794.0, 40.0
     CW = PW - 2 * ML
@@ -728,14 +728,17 @@ def draw_esencial(d, E, L, web, n=1):
         "<font color='%s'><b>Diario Astral</b></font>." % (GOLD_S, web, GOLD_S)),
         'r', 10.5, CREAM, 1.35)
     d.tx(PW - ML - 20, by + bh / 2.0 + 4, "Ver el detalle astrológico ›", 'b', 11.5, GOLD_S, 'r')
-    c.linkRect("", "detalle", (d.X(ML), d.Y(by + bh), d.X(ML + CW), d.Y(by)), relative=0,
-               thickness=0)
+    rect = (d.X(ML), d.Y(by + bh), d.X(ML + CW), d.Y(by))
+    if link == 'internal':
+        c.linkRect("", "detalle", rect, relative=0, thickness=0)
+    elif link:                                   # dirección web o esquema de la app
+        c.linkURL(link, rect, relative=0, thickness=0)
     # nota + pie
     d.para(ML, 1079 - 10 - nota_h, CW, d.esc(nota), 'r', 8.5, MUTED, 1.4)
     footer(d, n, web)
 
 
-def draw_portadilla(d, L, web, n=2, pags=(3, 4, 5)):
+def draw_portadilla(d, L, web, n=2, pags=(3, 4, 5), separado=False):
     from weekly_pdf import ASSETS, footer
     PW, ML = 794.0, 56.0
     CW = PW - 2 * ML
@@ -754,7 +757,8 @@ def draw_portadilla(d, L, web, n=2, pags=(3, 4, 5)):
     d.tx(ML, 262, "PARA QUIENES QUIEREN SABER MÁS", 'sb', 10, GOLD_S, track=4)
     d.tx(ML, 312, "Detalle astrológico", 'b', 42, WHITE, track=-0.8)
     d.para(ML, 330, 470, d.esc(
-        "La página anterior le dice qué hacer. Las siguientes le muestran por qué: el "
+        ("Su reporte esencial le dice qué hacer. " if separado else
+         "La página anterior le dice qué hacer. ") + "Las siguientes le muestran por qué: el "
         "cielo de la semana tal como lo lee un astrólogo, con sus planetas, casas y aspectos."),
         'r', 14, CREAM, 1.5)
 

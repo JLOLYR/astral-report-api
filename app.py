@@ -106,6 +106,8 @@ class ReportRequest(BaseModel):
     reloc: Optional[Reloc] = None
     target_date: Optional[str] = None
     week_date: Optional[str] = None
+    part: str = Field("full", description="Semanal: full (5 págs.) | esencial (1 pág.) | detalle (4 págs.)")
+    detail_url: Optional[str] = Field(None, description="Semanal esencial: enlace del botón «Ver el detalle»")
     person_a: Optional[BirthData] = None
     person_b: Optional[BirthData] = None
 
@@ -237,6 +239,8 @@ def make_report(req: ReportRequest):
                 reloc = {"lat": req.reloc.lat, "lon": req.reloc.lon, "tz": req.reloc.tz}
             data = astro.compute_weekly(_bd(req.natal), req.week_date, reloc)
             data["reloc_city"] = (req.reloc.city if req.reloc else "") or req.city
+            data["_part"] = (req.part or "full").lower()
+            data["_detail_url"] = req.detail_url
         elif ct == "combined":
             if not (req.person_a and req.person_b):
                 raise ValueError("Faltan los datos de una de las personas.")

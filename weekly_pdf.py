@@ -1121,13 +1121,26 @@ def render(data, interp, name='', city='', natal_city='', brand=None):
                               "pasa la semana en otra ciudad, puede relocalizar el reporte."
                               % (L['lugar'] or 'su ciudad natal'))
     E = we.build_esencial(data, L)
-    # Modo B: un solo PDF (esencial · portadilla · 3 páginas avanzadas)
-    d.off = 0
-    c.bookmarkPage("esencial")
-    c.addOutlineEntry("Su semana (esencial)", "esencial", level=0)
-    we.draw_esencial(d, E, L, web, n=1); c.showPage()
-    we.draw_portadilla(d, L, web, n=2, pags=(3, 4, 5)); c.showPage()
-    d.off = 2
+    # part = 'full'     → un solo PDF de 5 páginas (esencial · portadilla · 3 avanzadas)
+    #        'esencial' → solo la página esencial (1 página)
+    #        'detalle'  → portadilla + 3 avanzadas (4 páginas)
+    part = (data.get('_part') or 'full').lower()
+    if part == 'esencial':
+        d.off = 0
+        we.draw_esencial(d, E, L, web, n=1, link=data.get('_detail_url') or None)
+        c.showPage(); c.save()
+        return buf.getvalue()
+    if part != 'detalle':
+        d.off = 0
+        c.bookmarkPage("esencial")
+        c.addOutlineEntry("Su semana (esencial)", "esencial", level=0)
+        we.draw_esencial(d, E, L, web, n=1); c.showPage()
+        we.draw_portadilla(d, L, web, n=2, pags=(3, 4, 5)); c.showPage()
+        d.off = 2
+    else:
+        d.off = 0
+        we.draw_portadilla(d, L, web, n=1, pags=(2, 3, 4), separado=True); c.showPage()
+        d.off = 1
     _page1(d, L, data, web); c.showPage()
     _page2(d, L, data, web); c.showPage()
     _page3(d, L, data, web, brand); c.showPage()

@@ -2298,7 +2298,8 @@ def generate(data, name, fmt, chart_png, city="", astrologer="", chart_type="nat
         meta['extra_lines'] = ['Semana del ' + _rng,
                                'Calculado para el lunes a las 00:00' +
                                ((' en ' + _wplace) if _wplace else '')]
-        meta['file_suffix'] = '_semana_' + _w.get('start', '')
+        meta['file_suffix'] = '_semana_' + _w.get('start', '') + (
+            ('_' + data['_part']) if data.get('_part') in ('esencial', 'detalle') else '')
 
     # ── Tránsitos: bi-rueda (natal adentro, tránsitos afuera) ─────────────
     if ct in ('transit', 'weekly') and data.get('natal') and data.get('transit'):
